@@ -1,0 +1,19 @@
+name:                const-math-ghc-plugin
+version:             0.1.0.0
+synopsis:            Compiler plugin for constant math elimination
+description:         
+  This library implements elimination of constant math expressions.
+license:             BSD3
+license-file:        LICENSE
+author:              Conrad Parker
+maintainer:          Conrad Parker <conrad@metadecks.org>
+-- copyright:           
+category:            Compiler Plugin
+build-type:          Simple
+cabal-version:       >=1.8
+
+library
+  exposed-modules:     ConstMath.Plugin
+  other-modules:       ConstMath.Pass
+  build-depends:       base < 5,
+                       ghc >= 7.4
