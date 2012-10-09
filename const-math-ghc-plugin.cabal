@@ -16,4 +16,5 @@ library
   exposed-modules:     ConstMath.Plugin
   other-modules:       ConstMath.Pass
   build-depends:       base < 5,
+                       containers,
                        ghc >= 7.4
