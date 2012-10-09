@@ -80,14 +80,33 @@ collapseUnary expr@(App f1 (App f2 (Lit (MachDouble d)))) =
     case (f'm, kf2) of
         (Just f, Just DHash) -> do
             let sub = f (fromRational d)
-            putMsgS $ "Replacing " ++ show (fromJust kf1)
-            return $ App f2 (mkDoubleLitDouble sub)
+            maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x))) =<< maybeIEEE (show (fromJust kf1)) sub
         _ -> return expr
     where
         kf1 = toKnownFunc f1
         kf2 = toKnownFunc f2
         f'm = flip Map.lookup subFunc =<< kf1
 collapseUnary expr = return expr
+
+maybeIEEE :: String -> Double -> CoreM (Maybe Double)
+maybeIEEE s d
+    | isNaN d = do
+        err "NaN"
+        return Nothing
+    | isInfinite d = do
+        err "infinite"
+        return Nothing
+    | isDenormalized d = do
+        err "denormalized"
+        return Nothing
+    | isNegativeZero d = do
+        err "negative zero"
+        return Nothing
+    | otherwise = do
+        putMsgS $ "Result of replacing " ++ s ++ " is ok"
+        return (Just d)
+    where
+        err v = errorMsgS $ "Skipping replacement of " ++ s ++ " result " ++ v
 
 ----------------------------------------------------------------------
 
