@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE RankNTypes #-}
 
 module ConstMath.Pass (
       constMathProgram
@@ -89,9 +90,16 @@ collapseUnary expr@(App f1 (App f2 (Lit (MachDouble d))))
       = maybe (return expr) substUnary =<< maybeIEEE name (f (fromRational d))
     where
         substUnary x = return (App f2 (mkDoubleLitDouble x))
+collapseUnary expr@(App f1 (App f2 (Lit (MachFloat d))))
+    | isFHash f2
+    , Just f <- cmSubst <$> findSub f1
+    , Just name <- funcName f1
+      = maybe (return expr) substUnary =<< maybeIEEE name (f (fromRational d))
+    where
+        substUnary x = return (App f2 (mkFloatLitFloat x))
 collapseUnary expr = return expr
 
-maybeIEEE :: String -> Double -> CoreM (Maybe Double)
+maybeIEEE :: RealFloat a => String -> a -> CoreM (Maybe a)
 maybeIEEE s d
     | isNaN d = do
         err "NaN"
@@ -115,11 +123,14 @@ maybeIEEE s d
 
 data CMSub = CMSub
     { cmFuncName :: String
-    , cmSubst    :: (Double -> Double)
+    , cmSubst    :: forall a . (RealFloat a) => (a -> a)
     }
 
 funcName :: CoreExpr -> Maybe String
 funcName = listToMaybe . words . showSDoc . ppr
+
+isFHash :: CoreExpr -> Bool
+isFHash = maybe False ((==) "GHC.Types.F#") . funcName
 
 isDHash :: CoreExpr -> Bool
 isDHash = maybe False ((==) "GHC.Types.D#") . funcName
