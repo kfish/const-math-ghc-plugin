@@ -115,7 +115,7 @@ mkBinaryCollapse fnE expr@(App (App f1 (App f2 (Lit (MachDouble d1)))) (App f3 (
 mkBinaryCollapse fnE expr@(App (App f1 (App f2 (Lit (MachFloat d1)))) (App f3 (Lit (MachFloat d2))))
     | isFHash f2 && isFHash f3 = do
         let sub = fnE (fromRational d1) (fromRational d2)
-        maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x)))
+        maybe (return expr) (\x -> return (App f2 (mkFloatLitFloat x)))
               =<< maybeIEEE (fromJust $ funcName f1) sub
 mkBinaryCollapse _ expr = return expr
 
