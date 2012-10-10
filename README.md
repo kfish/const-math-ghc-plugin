@@ -35,7 +35,7 @@ Status](https://secure.travis-ci.org/kfish/const-math-ghc-plugin.png?branch=mast
 
 # Installation
 
-Install the latest version of the plugin from Hackage (requires GHC 7.4.1):
+Install the latest version of the plugin from Hackage (requires GHC >= 7.4.1):
 
     $ cabal install const-math-ghc-plugin
 
