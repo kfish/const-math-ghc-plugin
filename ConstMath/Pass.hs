@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 
 module ConstMath.Pass (
       constMathProgram
@@ -81,15 +82,13 @@ subExpr expr@(Case scrut bndr ty alts) = do
 ----------------------------------------------------------------------
 
 collapseUnary :: CoreExpr -> CoreM CoreExpr
-collapseUnary expr@(App f1 (App f2 (Lit (MachDouble d)))) =
-    case (f'm, dh) of
-        (Just f, True) -> do
-            let sub = f (fromRational d)
-            maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x))) =<< maybeIEEE (fromJust $ funcName f1) sub
-        _ -> return expr
+collapseUnary expr@(App f1 (App f2 (Lit (MachDouble d))))
+    | isDHash f2
+    , Just f <- cmSubst <$> findSub f1
+    , Just name <- funcName f1
+      = maybe (return expr) substUnary =<< maybeIEEE name (f (fromRational d))
     where
-        f'm = cmSubst <$> findSub f1
-        dh  = isDHash f2
+        substUnary x = return (App f2 (mkDoubleLitDouble x))
 collapseUnary expr = return expr
 
 maybeIEEE :: String -> Double -> CoreM (Maybe Double)
