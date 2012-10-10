@@ -13,6 +13,20 @@ To use it:
 
   $ ghc -fplugin ConstMath.Plugin foo.hs
 
+Arguments can be passed to the plugin with
+
+  $ ghc -fplugin ConstMath.Plugin -fplugin-opt=ConstMath.Plugin:ARG foo.hs
+
+currently available arguments are
+  -v,--verbose
+      verbose output (default)
+
+  --trace
+      very verbose output (useful for seeing the AST used for matching)
+
+  -q, --quiet
+      no output
+
 # More dakka:
 
 In some cases, there are opportunities for constant folding that the

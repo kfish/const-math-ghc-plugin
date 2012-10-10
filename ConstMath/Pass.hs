@@ -7,96 +7,100 @@ module ConstMath.Pass (
       constMathProgram
 ) where
 
+import ConstMath.Types
+
 import Control.Applicative ((<$>))
 import Control.Monad ((<=<))
+import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 
 import GhcPlugins
+import Var
 
-constMathProgram :: [CoreBind] -> CoreM [CoreBind]
-constMathProgram binds = do
-    putMsgS "\nStarting ConstMath pass"
-    mapM (subBind "") binds
+constMathProgram :: Opts -> [CoreBind] -> CoreM [CoreBind]
+constMathProgram opts binds = do
+    traceMsg opts "\nStarting ConstMath pass"
+    mapM (subBind opts "") binds
 
-subBind :: String -> CoreBind -> CoreM CoreBind
-subBind tab (NonRec b rhs) = do
-    putMsgS $ tab ++ "Non-recursive binding named " ++ showSDoc (ppr b)
-    rhs' <- subExpr tab rhs
+subBind :: Opts -> String -> CoreBind -> CoreM CoreBind
+subBind opts tab (NonRec b rhs) = do
+    traceMsg opts $ tab ++ "Non-recursive binding named " ++ showSDoc (ppr b)
+    rhs' <- subExpr opts tab rhs
     return (NonRec b rhs')
-subBind _tab bndr@(Rec pairs) = do
-    _ <- mapM (uncurry printRecBind) pairs
+subBind opts tab bndr@(Rec pairs) = do
+    _ <- mapM (uncurry $ printRecBind opts) pairs
     return bndr
 
-printRecBind :: forall t a. Outputable a => a -> t -> CoreM ()
-printRecBind b _e = do
-    putMsgS $ "Recursive binding " ++ showSDoc (ppr b)
+printRecBind opts b _e = do
+    traceMsg opts $ "Recursive binding " ++ showSDoc (ppr b)
 
-subExpr :: String -> CoreExpr -> CoreM CoreExpr
+subExpr :: Opts -> String -> CoreExpr -> CoreM CoreExpr
 
-subExpr tab expr@(Type t) = do
-    putMsgS $ tab ++ "Type " ++ showSDoc (ppr t)
+subExpr opts tab expr@(Type t) = do
+    traceMsg opts $ tab ++ "Type " ++ showSDoc (ppr t)
     return expr
 
-subExpr tab expr@(Coercion _co) = do
-    putMsgS $ tab ++ "Coercion"
+subExpr opts tab expr@(Coercion _co) = do
+    traceMsg opts $ tab ++ "Coercion"
     return expr
 
-subExpr tab expr@(Lit lit) = do
-    putMsgS $ tab ++ "Lit " ++ showSDoc (ppr lit)
+subExpr opts tab expr@(Lit lit) = do
+    traceMsg opts $ tab ++ "Lit " ++ showSDoc (ppr lit)
     return expr
 
-subExpr tab expr@(Var v) = do
-    putMsgS $ tab ++ "Var " ++ showSDoc (ppr v)
+subExpr opts tab expr@(Var v) = do
+    traceMsg opts $ tab ++ "Var " ++ showSDoc (ppr v)
     return expr
 
-subExpr tab (App f a) = do
-    putMsgS $ tab ++ "App " ++ showSDoc (ppr f)
-    f' <- subExpr (tab ++ "< ") f
-    a' <- subExpr (tab ++ "> ") a
-    collapse (App f' a')
+subExpr opts tab (App f a) = do
+    traceMsg opts $ tab ++ "App " ++ showSDoc (ppr f)
+    f' <- subExpr opts (tab ++ "< ") f
+    a' <- subExpr opts (tab ++ "> ") a
+    collapse opts (App f' a')
 
-subExpr tab (Tick t e) = do
-    putMsgS $ tab ++ "Tick"
-    e' <- subExpr (tab ++ "  ") e
+subExpr opts tab (Tick t e) = do
+    traceMsg opts $ tab ++ "Tick"
+    e' <- subExpr opts (tab ++ "  ") e
     return (Tick t e')
 
-subExpr tab (Cast e co) = do
-    putMsgS $ tab ++ "Cast"
-    e' <- subExpr (tab ++ "  ") e
+subExpr opts tab (Cast e co) = do
+    traceMsg opts $ tab ++ "Cast"
+    e' <- subExpr opts (tab ++ "  ") e
     return (Cast e' co)
 
-subExpr tab (Lam b e) = do
-    putMsgS $ tab ++ "Lam"
-    e' <- subExpr (tab ++ "  ") e
+subExpr opts tab (Lam b e) = do
+    traceMsg opts $ tab ++ "Lam"
+    e' <- subExpr opts (tab ++ "  ") e
     return (Lam b e')
 
-subExpr tab (Let bind e) = do
-    putMsgS $ tab ++ "Let"
-    bind' <- subBind tab bind
-    e' <- subExpr (tab ++ "  ") e
+subExpr opts tab (Let bind e) = do
+    traceMsg opts $ tab ++ "Let"
+    bind' <- subBind opts tab bind
+    e' <- subExpr opts (tab ++ "  ") e
     return (Let bind' e')
 
-subExpr tab (Case scrut bndr ty alts) = do
-    putMsgS $ tab ++ "Case"
-    let subAlt (ac,bs,eB) = (ac,bs,) <$> subExpr (tab ++ "  ") eB
-    scrut' <- subExpr (tab ++ "  ") scrut
+subExpr opts tab (Case scrut bndr ty alts) = do
+    traceMsg opts $ tab ++ "Case"
+    let subAlt (ac,bs,eB) = (ac,bs,) <$> subExpr opts (tab ++ "  ") eB
+    scrut' <- subExpr opts (tab ++ "  ") scrut
     alts' <- mapM subAlt alts
     return (Case scrut' bndr ty alts')
 
 ----------------------------------------------------------------------
 
-collapse :: CoreExpr -> CoreM CoreExpr
-collapse expr@(App f1 _)
+collapse :: Opts -> CoreExpr -> CoreM CoreExpr
+collapse opts expr@(App f1 _)
   | Just f <- cmSubst <$> findSub f1
-    = f expr
-collapse expr = return expr
+    = f opts expr
+collapse _ expr = return expr
 
 mkUnaryCollapseIEEE :: (forall a. RealFloat a => (a -> a))
+                    -> Opts
                     -> CoreExpr
                     -> CoreM CoreExpr
-mkUnaryCollapseIEEE fnE expr@(App f1 (App f2 (Lit lit)))
+mkUnaryCollapseIEEE fnE opts expr@(App f1 (App f2 (Lit lit)))
     | isDHash f2, MachDouble d <- lit = evalUnaryIEEE d mkDoubleLitDouble
     | isFHash f2, MachFloat d  <- lit = evalUnaryIEEE d mkFloatLitFloat
     where
@@ -104,13 +108,14 @@ mkUnaryCollapseIEEE fnE expr@(App f1 (App f2 (Lit lit)))
             let sub = fnE (fromRational d)
             maybe (return expr)
               (return . App f2 . mkLit)
-              =<< maybeIEEE (fromJust $ funcName f1) sub
-mkUnaryCollapseIEEE _ expr = return expr
+              =<< maybeIEEE opts (fromJust $ funcName f1) sub
+mkUnaryCollapseIEEE _ _ expr = return expr
 
 mkUnaryCollapseNum :: (forall a . Num a => (a -> a))
+                   -> Opts
                    -> CoreExpr
                    -> CoreM CoreExpr
-mkUnaryCollapseNum fnE (App _f1 (App f2 (Lit lit)))
+mkUnaryCollapseNum fnE opts (App _f1 (App f2 (Lit lit)))
     | isDHash f2, MachDouble d <- lit =
         evalUnaryNum fromRational d mkDoubleLitDouble
     | isFHash f2, MachFloat d  <- lit =
@@ -123,12 +128,13 @@ mkUnaryCollapseNum fnE (App _f1 (App f2 (Lit lit)))
         evalUnaryNum from d mkLit = do
             let sub = fnE (from d)
             return (App f2 (mkLit sub))
-mkUnaryCollapseNum _ expr = return expr
+mkUnaryCollapseNum _ _ expr = return expr
 
 mkBinaryCollapse :: (forall a. RealFloat a => (a -> a -> a))
+                 -> Opts
                  -> CoreExpr
                  -> CoreM CoreExpr
-mkBinaryCollapse fnE expr@(App (App f1 (App f2 (Lit lit1))) (App f3 (Lit lit2)))
+mkBinaryCollapse fnE opts expr@(App (App f1 (App f2 (Lit lit1))) (App f3 (Lit lit2)))
     | isDHash f2 && isDHash f3
     , MachDouble d1 <- lit1, MachDouble d2 <- lit2 =
         evalBinaryIEEE d1 d2 mkDoubleLitDouble
@@ -139,26 +145,26 @@ mkBinaryCollapse fnE expr@(App (App f1 (App f2 (Lit lit1))) (App f3 (Lit lit2)))
         evalBinaryIEEE d1 d2 mkLit = do
             let sub = fnE (fromRational d1) (fromRational d2)
             maybe (return expr) (\x -> return (App f2 (mkLit x)))
-                  =<< maybeIEEE (fromJust $ funcName f1) sub
-mkBinaryCollapse _ expr = return expr
+                  =<< maybeIEEE opts (fromJust $ funcName f1) sub
+mkBinaryCollapse _ _ expr = return expr
 
-fromRationalCollapse :: CoreExpr -> CoreM CoreExpr
-fromRationalCollapse expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
+fromRationalCollapse :: Opts -> CoreExpr -> CoreM CoreExpr
+fromRationalCollapse opts expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
     | Just "ConstMath.Rules.rationalToFloat" <- funcName f1
     , Just "GHC.Real.:%" <- funcName f2
       = do
           let sub = fromRational $ (fromInteger n) / (fromInteger d)
-          maybe (return expr) (\x -> return (mkFloatExpr x)) =<< maybeIEEE (fromJust $ funcName f1) sub
-fromRationalCollapse expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
+          maybe (return expr) (\x -> return (mkFloatExpr x)) =<< maybeIEEE opts (fromJust $ funcName f1) sub
+fromRationalCollapse opts expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
     | Just "ConstMath.Rules.rationalToDouble" <- funcName f1
     , Just "GHC.Real.:%" <- funcName f2
       = do
           let sub = fromRational $ (fromInteger n) / (fromInteger d)
-          maybe (return expr) (\x -> return (mkDoubleExpr x)) =<< maybeIEEE (fromJust $ funcName f1) sub
-fromRationalCollapse expr = return expr
+          maybe (return expr) (\x -> return (mkDoubleExpr x)) =<< maybeIEEE opts (fromJust $ funcName f1) sub
+fromRationalCollapse _ expr = return expr
 
-maybeIEEE :: RealFloat a => String -> a -> CoreM (Maybe a)
-maybeIEEE s d
+maybeIEEE :: RealFloat a => Opts -> String -> a -> CoreM (Maybe a)
+maybeIEEE opts s d
     | isNaN d = do
         err "NaN"
         return Nothing
@@ -172,7 +178,7 @@ maybeIEEE s d
         err "negative zero"
         return Nothing
     | otherwise = do
-        putMsgS $ "Result of replacing " ++ s ++ " is ok"
+        msg opts $ "Result of replacing " ++ s ++ " is ok"
         return (Just d)
     where
         err v = errorMsgS $ "Skipping replacement of " ++ s ++ " result " ++ v
@@ -181,7 +187,7 @@ maybeIEEE s d
 
 data CMSub = CMSub
     { cmFuncName :: String
-    , cmSubst    :: CoreExpr -> CoreM CoreExpr
+    , cmSubst    :: Opts -> CoreExpr -> CoreM CoreExpr
     }
 
 unarySubIEEE :: String -> (forall a. RealFloat a => a -> a) -> CMSub
@@ -237,3 +243,20 @@ subs =
 
 subFunc :: Map String CMSub
 subFunc = Map.fromList $ zip (map cmFuncName subs) subs
+
+----------------------------------------------------------------------
+
+msg :: Opts -> String -> CoreM ()
+msg opts msg
+    | not (quiet opts) = putMsgS msg
+    | otherwise = return ()
+
+vMsg :: Opts -> String -> CoreM ()
+vMsg opts msg
+    | verbose opts = putMsgS msg
+    | otherwise    = return ()
+
+traceMsg :: Opts -> String -> CoreM ()
+traceMsg opts msg
+    | traced opts = putMsgS msg
+    | otherwise   = return ()
