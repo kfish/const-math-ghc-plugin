@@ -5,7 +5,7 @@ description:
   This library implements elimination of constant math expressions.
 license:             BSD3
 license-file:        LICENSE
-author:              Conrad Parker
+author:              Conrad Parker, John Lato
 maintainer:          Conrad Parker <conrad@metadecks.org>
 -- copyright:           
 category:            Compiler Plugin

@@ -25,12 +25,12 @@ constMathProgram opts binds = do
     mapM (subBind opts "") binds
 
 subBind :: Opts -> String -> CoreBind -> CoreM CoreBind
-subBind opts tab bndr@(NonRec b rhs) = do
+subBind opts tab (NonRec b rhs) = do
     traceMsg opts $ tab ++ "Non-recursive binding named " ++ showSDoc (ppr b)
     rhs' <- subExpr opts tab rhs
     return (NonRec b rhs')
 subBind opts tab bndr@(Rec pairs) = do
-    mapM (uncurry $ printRecBind opts) pairs
+    _ <- mapM (uncurry $ printRecBind opts) pairs
     return bndr
 
 printRecBind opts b _e = do
@@ -42,7 +42,7 @@ subExpr opts tab expr@(Type t) = do
     traceMsg opts $ tab ++ "Type " ++ showSDoc (ppr t)
     return expr
 
-subExpr opts tab expr@(Coercion co) = do
+subExpr opts tab expr@(Coercion _co) = do
     traceMsg opts $ tab ++ "Coercion"
     return expr
 
@@ -55,8 +55,7 @@ subExpr opts tab expr@(Var v) = do
     return expr
 
 subExpr opts tab (App f a) = do
-    let funcName = showSDoc (ppr f)
-    traceMsg opts $ tab ++ "App " ++ funcName
+    traceMsg opts $ tab ++ "App " ++ showSDoc (ppr f)
     f' <- subExpr opts (tab ++ "< ") f
     a' <- subExpr opts (tab ++ "> ") a
     collapse opts (App f' a')
@@ -82,7 +81,7 @@ subExpr opts tab (Let bind e) = do
     e' <- subExpr opts (tab ++ "  ") e
     return (Let bind' e')
 
-subExpr opts tab expr@(Case scrut bndr ty alts) = do
+subExpr opts tab (Case scrut bndr ty alts) = do
     traceMsg opts $ tab ++ "Case"
     let subAlt (ac,bs,eB) = (ac,bs,) <$> subExpr opts (tab ++ "  ") eB
     scrut' <- subExpr opts (tab ++ "  ") scrut
@@ -116,7 +115,7 @@ mkUnaryCollapseNum :: (forall a . Num a => (a -> a))
                    -> Opts
                    -> CoreExpr
                    -> CoreM CoreExpr
-mkUnaryCollapseNum fnE opts (App f1 (App f2 (Lit lit)))
+mkUnaryCollapseNum fnE opts (App _f1 (App f2 (Lit lit)))
     | isDHash f2, MachDouble d <- lit =
         evalUnaryNum fromRational d mkDoubleLitDouble
     | isFHash f2, MachFloat d  <- lit =
@@ -218,6 +217,7 @@ isWHash = maybe False ((==) "GHC.Word.W#") . funcName
 findSub :: CoreExpr -> Maybe CMSub
 findSub = flip Map.lookup subFunc <=< funcName
 
+subs :: [CMSub]
 subs =
     [ unarySubIEEE "GHC.Float.exp"    exp
     , unarySubIEEE "GHC.Float.log"    log
