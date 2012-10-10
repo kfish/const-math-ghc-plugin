@@ -9,13 +9,11 @@ module ConstMath.Pass (
 
 import Control.Applicative ((<$>))
 import Control.Monad ((<=<))
-import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 
 import GhcPlugins
-import Var
 
 constMathProgram :: [CoreBind] -> CoreM [CoreBind]
 constMathProgram binds = do
@@ -23,14 +21,15 @@ constMathProgram binds = do
     mapM (subBind "") binds
 
 subBind :: String -> CoreBind -> CoreM CoreBind
-subBind tab bndr@(NonRec b rhs) = do
+subBind tab (NonRec b rhs) = do
     putMsgS $ tab ++ "Non-recursive binding named " ++ showSDoc (ppr b)
     rhs' <- subExpr tab rhs
     return (NonRec b rhs')
-subBind tab bndr@(Rec pairs) = do
-    mapM (uncurry printRecBind) pairs
+subBind _tab bndr@(Rec pairs) = do
+    _ <- mapM (uncurry printRecBind) pairs
     return bndr
 
+printRecBind :: forall t a. Outputable a => a -> t -> CoreM ()
 printRecBind b _e = do
     putMsgS $ "Recursive binding " ++ showSDoc (ppr b)
 
@@ -40,7 +39,7 @@ subExpr tab expr@(Type t) = do
     putMsgS $ tab ++ "Type " ++ showSDoc (ppr t)
     return expr
 
-subExpr tab expr@(Coercion co) = do
+subExpr tab expr@(Coercion _co) = do
     putMsgS $ tab ++ "Coercion"
     return expr
 
@@ -53,8 +52,7 @@ subExpr tab expr@(Var v) = do
     return expr
 
 subExpr tab (App f a) = do
-    let funcName = showSDoc (ppr f)
-    putMsgS $ tab ++ "App " ++ funcName
+    putMsgS $ tab ++ "App " ++ showSDoc (ppr f)
     f' <- subExpr (tab ++ "< ") f
     a' <- subExpr (tab ++ "> ") a
     collapse (App f' a')
@@ -80,7 +78,7 @@ subExpr tab (Let bind e) = do
     e' <- subExpr (tab ++ "  ") e
     return (Let bind' e')
 
-subExpr tab expr@(Case scrut bndr ty alts) = do
+subExpr tab (Case scrut bndr ty alts) = do
     putMsgS $ tab ++ "Case"
     let subAlt (ac,bs,eB) = (ac,bs,) <$> subExpr (tab ++ "  ") eB
     scrut' <- subExpr (tab ++ "  ") scrut
@@ -112,7 +110,7 @@ mkUnaryCollapseIEEE _ expr = return expr
 mkUnaryCollapseNum :: (forall a . Num a => (a -> a))
                    -> CoreExpr
                    -> CoreM CoreExpr
-mkUnaryCollapseNum fnE (App f1 (App f2 (Lit lit)))
+mkUnaryCollapseNum fnE (App _f1 (App f2 (Lit lit)))
     | isDHash f2, MachDouble d <- lit =
         evalUnaryNum fromRational d mkDoubleLitDouble
     | isFHash f2, MachFloat d  <- lit =
@@ -213,6 +211,7 @@ isWHash = maybe False ((==) "GHC.Word.W#") . funcName
 findSub :: CoreExpr -> Maybe CMSub
 findSub = flip Map.lookup subFunc <=< funcName
 
+subs :: [CMSub]
 subs =
     [ unarySubIEEE "GHC.Float.exp"    exp
     , unarySubIEEE "GHC.Float.log"    log
