@@ -3,6 +3,8 @@ module ConstMath.Pass (
       constMathProgram
 ) where
 
+import Control.Applicative ((<$>))
+import Control.Monad ((<=<))
 import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -77,15 +79,14 @@ subExpr expr@(Case scrut bndr ty alts) = do
 
 collapseUnary :: CoreExpr -> CoreM CoreExpr
 collapseUnary expr@(App f1 (App f2 (Lit (MachDouble d)))) =
-    case (f'm, kf2) of
-        (Just f, Just DHash) -> do
+    case (f'm, dh) of
+        (Just f, True) -> do
             let sub = f (fromRational d)
-            maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x))) =<< maybeIEEE (show (fromJust kf1)) sub
+            maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x))) =<< maybeIEEE (fromJust $ funcName f1) sub
         _ -> return expr
     where
-        kf1 = toKnownFunc f1
-        kf2 = toKnownFunc f2
-        f'm = flip Map.lookup subFunc =<< kf1
+        f'm = cmSubst <$> findSub f1
+        dh  = isDHash f2
 collapseUnary expr = return expr
 
 maybeIEEE :: String -> Double -> CoreM (Maybe Double)
@@ -110,29 +111,28 @@ maybeIEEE s d
 
 ----------------------------------------------------------------------
 
-type CMEnv = Map KnownFunc CoreExpr
-data KnownFunc = DHash | Sqrt | Exp | Log | Sin | Cos | Negate
-    deriving (Ord, Eq, Show)
+data CMSub = CMSub
+    { cmFuncName :: String
+    , cmSubst    :: (Double -> Double)
+    }
 
-toKnownFunc :: CoreExpr -> Maybe KnownFunc
-toKnownFunc expr
-    | isPrefixOf "GHC.Types.D#"   funcName = Just DHash
-    | isPrefixOf "GHC.Float.sqrt" funcName = Just Sqrt
-    | isPrefixOf "GHC.Float.exp"  funcName = Just Exp
-    | isPrefixOf "GHC.Float.log"  funcName = Just Log
-    | isPrefixOf "GHC.Float.sin"  funcName = Just Sin
-    | isPrefixOf "GHC.Float.cos"  funcName = Just Cos
-    | isPrefixOf "GHC.Num.negate" funcName = Just Negate
-    | otherwise                            = Nothing
-    where
-        funcName = showSDoc (ppr expr)
+funcName :: CoreExpr -> Maybe String
+funcName = listToMaybe . words . showSDoc . ppr
 
-subFunc :: Map KnownFunc (Double -> Double)
-subFunc = Map.fromList
-    [ (Sqrt, sqrt)
-    , (Exp, exp)
-    , (Log, log)
-    , (Sin, sin)
-    , (Cos, cos)
-    , (Negate, negate)
+isDHash :: CoreExpr -> Bool
+isDHash = maybe False ((==) "GHC.Types.D#") . funcName
+
+findSub :: CoreExpr -> Maybe CMSub
+findSub = flip Map.lookup subFunc <=< funcName
+
+subs =
+    [ CMSub "GHC.Float.sqrt"   sqrt
+    , CMSub "GHC.Float.exp"    exp
+    , CMSub "GHC.Float.log"    log
+    , CMSub "GHC.Float.sin"    sin
+    , CMSub "GHC.Float.cos"    cos
+    , CMSub "GHC.Num.negate"   negate
     ]
+
+subFunc :: Map String CMSub
+subFunc = Map.fromList $ zip (map cmFuncName subs) subs
