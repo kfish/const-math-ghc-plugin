@@ -2,6 +2,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 
+{-# OPTIONS_GHC -Wall #-}
 module ConstMath.Pass (
       constMathProgram
 ) where
