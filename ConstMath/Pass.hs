@@ -47,25 +47,28 @@ subExpr expr@(Var v) = do
     putMsgS "Var"
     return expr
 
-subExpr _expr@(App f a) = do
+subExpr (App f a) = do
     let funcName = showSDoc (ppr f)
     putMsgS $ "App " ++ funcName
     a' <- subExpr a
     collapseUnary (App f a')
 
-subExpr expr@(Tick t e) = do
+subExpr (Tick t e) = do
     putMsgS "Tick"
-    return expr
+    e' <- subExpr e
+    return (Tick t e')
 
-subExpr expr@(Cast e co) = do
+subExpr (Cast e co) = do
     putMsgS "Cast"
-    return expr
+    e' <- subExpr e
+    return (Cast e' co)
 
-subExpr expr@(Lam b e) = do
+subExpr (Lam b e) = do
     putMsgS "Lam"
-    return expr
+    e' <- subExpr e
+    return (Lam b e')
 
-subExpr _expr@(Let bind e) = do
+subExpr (Let bind e) = do
     putMsgS "Let"
     bind' <- subBind bind
     e' <- subExpr e
