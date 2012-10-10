@@ -89,20 +89,43 @@ collapse expr@(App f1 _)
     = f expr
 collapse expr = return expr
 
-mkUnaryCollapse :: (forall a. RealFloat a => (a -> a))
-                -> CoreExpr
-                -> CoreM CoreExpr
-mkUnaryCollapse fnE expr@(App f1 (App f2 (Lit (MachDouble d))))
+mkUnaryCollapseIEEE :: (forall a. RealFloat a => (a -> a))
+                    -> CoreExpr
+                    -> CoreM CoreExpr
+mkUnaryCollapseIEEE fnE expr@(App f1 (App f2 (Lit (MachDouble d))))
     | isDHash f2 = do
         let sub = fnE (fromRational d)
         maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x)))
               =<< maybeIEEE (fromJust $ funcName f1) sub
-mkUnaryCollapse fnE expr@(App f1 (App f2 (Lit (MachFloat d))))
+mkUnaryCollapseIEEE fnE expr@(App f1 (App f2 (Lit (MachFloat d))))
     | isFHash f2 = do
         let sub = fnE (fromRational d)
         maybe (return expr) (\x -> return (App f2 (mkFloatLitFloat x)))
               =<< maybeIEEE (fromJust $ funcName f1) sub
-mkUnaryCollapse _ expr = return expr
+mkUnaryCollapseIEEE _ expr = return expr
+
+mkUnaryCollapseNum :: (forall a . Num a => (a -> a))
+                   -> CoreExpr
+                   -> CoreM CoreExpr
+mkUnaryCollapseNum fnE expr@(App f1 (App f2 (Lit (MachDouble d))))
+    | isDHash f2 = do
+        let sub = fnE (fromRational d)
+        return (App f2 (mkDoubleLitDouble sub))
+mkUnaryCollapseNum fnE expr@(App f1 (App f2 (Lit (MachFloat d))))
+    | isFHash f2 = do
+        let sub = fnE (fromRational d)
+        return (App f2 (mkFloatLitFloat sub))
+mkUnaryCollapseNum fnE expr@(App f1 (App f2 (Lit (MachInt d))))
+    | isIHash f2 = do
+        let sub = fnE (fromIntegral d)
+        putMsgS $ "Replacing " ++ (fromJust $ funcName f1)
+        return (App f2 (mkIntLitInt sub))
+mkUnaryCollapseNum fnE expr@(App f1 (App f2 (Lit (MachWord d))))
+    | isWHash f2 = do
+        let sub = fnE (fromIntegral d)
+        putMsgS $ "Replacing " ++ (fromJust $ funcName f1)
+        return (App f2 (mkWordLitWord sub))
+mkUnaryCollapseNum _ expr = return expr
 
 mkBinaryCollapse :: (forall a. RealFloat a => (a -> a -> a))
                  -> CoreExpr
@@ -155,8 +178,11 @@ data CMSub = CMSub
     , cmSubst    :: CoreExpr -> CoreM CoreExpr
     }
 
-unarySub :: String -> (forall a. RealFloat a => a -> a) -> CMSub
-unarySub nm fn = CMSub nm (mkUnaryCollapse fn)
+unarySubIEEE :: String -> (forall a. RealFloat a => a -> a) -> CMSub
+unarySubIEEE nm fn = CMSub nm (mkUnaryCollapseIEEE fn)
+
+unarySubNum :: String -> (forall a . Num a => (a -> a)) -> CMSub
+unarySubNum nm fn = CMSub nm (mkUnaryCollapseNum fn)
 
 binarySub :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
 binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
@@ -170,28 +196,34 @@ isFHash = maybe False ((==) "GHC.Types.F#") . funcName
 isDHash :: CoreExpr -> Bool
 isDHash = maybe False ((==) "GHC.Types.D#") . funcName
 
+isIHash :: CoreExpr -> Bool
+isIHash = maybe False ((==) "GHC.Types.I#") . funcName
+
+isWHash :: CoreExpr -> Bool
+isWHash = maybe False ((==) "GHC.Word.W#") . funcName
+
 findSub :: CoreExpr -> Maybe CMSub
 findSub = flip Map.lookup subFunc <=< funcName
 
 subs =
-    [ unarySub "GHC.Float.exp"    exp
-    , unarySub "GHC.Float.log"    log
-    , unarySub "GHC.Float.sqrt"   sqrt
-    , unarySub "GHC.Float.sin"    sin
-    , unarySub "GHC.Float.cos"    cos
-    , unarySub "GHC.Float.tan"    tan
-    , unarySub "GHC.Float.asin"   asin
-    , unarySub "GHC.Float.acos"   acos
-    , unarySub "GHC.Float.atan"   atan
-    , unarySub "GHC.Float.sinh"   sinh
-    , unarySub "GHC.Float.cosh"   cosh
-    , unarySub "GHC.Float.tanh"   tanh
-    , unarySub "GHC.Float.asinh"  asinh
-    , unarySub "GHC.Float.acosh"  acosh
-    , unarySub "GHC.Float.atanh"  atanh
-    , unarySub "GHC.Num.negate"   negate
-    , unarySub "GHC.Num.abs"      abs
-    , unarySub "GHC.Num.signum"   signum
+    [ unarySubIEEE "GHC.Float.exp"    exp
+    , unarySubIEEE "GHC.Float.log"    log
+    , unarySubIEEE "GHC.Float.sqrt"   sqrt
+    , unarySubIEEE "GHC.Float.sin"    sin
+    , unarySubIEEE "GHC.Float.cos"    cos
+    , unarySubIEEE "GHC.Float.tan"    tan
+    , unarySubIEEE "GHC.Float.asin"   asin
+    , unarySubIEEE "GHC.Float.acos"   acos
+    , unarySubIEEE "GHC.Float.atan"   atan
+    , unarySubIEEE "GHC.Float.sinh"   sinh
+    , unarySubIEEE "GHC.Float.cosh"   cosh
+    , unarySubIEEE "GHC.Float.tanh"   tanh
+    , unarySubIEEE "GHC.Float.asinh"  asinh
+    , unarySubIEEE "GHC.Float.acosh"  acosh
+    , unarySubIEEE "GHC.Float.atanh"  atanh
+    , unarySubNum "GHC.Num.negate"   negate
+    , unarySubNum "GHC.Num.abs"      abs
+    , unarySubNum "GHC.Num.signum"   signum
     , CMSub    "GHC.Real.fromRational" fromRationalCollapse
     ]
 
