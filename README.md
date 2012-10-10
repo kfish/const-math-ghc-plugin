@@ -10,6 +10,7 @@ atanh) and unary Num functions (negate, abs, signum).
 To use it:
 
   $ cabal install
+
   $ ghc -fplugin ConstMath.Plugin foo.hs
 
 [travis-ci.org](http://travis-ci.org) results: [![Build
