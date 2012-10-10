@@ -141,11 +141,17 @@ mkBinaryCollapse _ expr = return expr
 
 fromRationalCollapse :: CoreExpr -> CoreM CoreExpr
 fromRationalCollapse expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
-    | Just "GHC.Real.fromRational" <- funcName f1
+    | Just "ConstMath.Rules.rationalToFloat" <- funcName f1
     , Just "GHC.Real.:%" <- funcName f2
       = do
           let sub = fromRational $ (fromInteger n) / (fromInteger d)
-          maybe (return expr) (\x -> return (App f2 (mkFloatLitFloat x))) =<< maybeIEEE (fromJust $ funcName f1) sub
+          maybe (return expr) (\x -> return (mkFloatExpr x)) =<< maybeIEEE (fromJust $ funcName f1) sub
+fromRationalCollapse expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
+    | Just "ConstMath.Rules.rationalToDouble" <- funcName f1
+    , Just "GHC.Real.:%" <- funcName f2
+      = do
+          let sub = fromRational $ (fromInteger n) / (fromInteger d)
+          maybe (return expr) (\x -> return (mkDoubleExpr x)) =<< maybeIEEE (fromJust $ funcName f1) sub
 fromRationalCollapse expr = return expr
 
 maybeIEEE :: RealFloat a => String -> a -> CoreM (Maybe a)
@@ -221,7 +227,8 @@ subs =
     , unarySubNum "GHC.Num.negate"   negate
     , unarySubNum "GHC.Num.abs"      abs
     , unarySubNum "GHC.Num.signum"   signum
-    , CMSub    "GHC.Real.fromRational" fromRationalCollapse
+    , CMSub    "ConstMath.Rules.rationalToFloat" fromRationalCollapse
+    , CMSub    "ConstMath.Rules.rationalToDouble" fromRationalCollapse
     ]
 
 subFunc :: Map String CMSub
