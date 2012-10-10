@@ -92,13 +92,12 @@ collapse expr = return expr
 mkUnaryCollapseIEEE :: (forall a. RealFloat a => (a -> a))
                     -> CoreExpr
                     -> CoreM CoreExpr
-mkUnaryCollapseIEEE fnE expr@(App f1 (App f2 (Lit (MachDouble d))))
-    | isDHash f2 = do
+mkUnaryCollapseIEEE fnE expr@(App f1 (App f2 (Lit lit)))
+    | isDHash f2 , MachDouble d <- lit = do
         let sub = fnE (fromRational d)
         maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x)))
               =<< maybeIEEE (fromJust $ funcName f1) sub
-mkUnaryCollapseIEEE fnE expr@(App f1 (App f2 (Lit (MachFloat d))))
-    | isFHash f2 = do
+    | isFHash f2 , MachFloat d <- lit = do
         let sub = fnE (fromRational d)
         maybe (return expr) (\x -> return (App f2 (mkFloatLitFloat x)))
               =<< maybeIEEE (fromJust $ funcName f1) sub
@@ -107,21 +106,18 @@ mkUnaryCollapseIEEE _ expr = return expr
 mkUnaryCollapseNum :: (forall a . Num a => (a -> a))
                    -> CoreExpr
                    -> CoreM CoreExpr
-mkUnaryCollapseNum fnE expr@(App f1 (App f2 (Lit (MachDouble d))))
-    | isDHash f2 = do
+mkUnaryCollapseNum fnE expr@(App f1 (App f2 (Lit lit)))
+    | isDHash f2 , MachDouble d <- lit = do
         let sub = fnE (fromRational d)
         return (App f2 (mkDoubleLitDouble sub))
-mkUnaryCollapseNum fnE expr@(App f1 (App f2 (Lit (MachFloat d))))
-    | isFHash f2 = do
+    | isFHash f2 , MachFloat d <- lit = do
         let sub = fnE (fromRational d)
         return (App f2 (mkFloatLitFloat sub))
-mkUnaryCollapseNum fnE expr@(App f1 (App f2 (Lit (MachInt d))))
-    | isIHash f2 = do
+    | isIHash f2 , MachInt d <- lit = do
         let sub = fnE (fromIntegral d)
         putMsgS $ "Replacing " ++ (fromJust $ funcName f1)
         return (App f2 (mkIntLitInt sub))
-mkUnaryCollapseNum fnE expr@(App f1 (App f2 (Lit (MachWord d))))
-    | isWHash f2 = do
+    | isWHash f2 , MachWord d <- lit = do
         let sub = fnE (fromIntegral d)
         putMsgS $ "Replacing " ++ (fromJust $ funcName f1)
         return (App f2 (mkWordLitWord sub))
@@ -130,13 +126,12 @@ mkUnaryCollapseNum _ expr = return expr
 mkBinaryCollapse :: (forall a. RealFloat a => (a -> a -> a))
                  -> CoreExpr
                  -> CoreM CoreExpr
-mkBinaryCollapse fnE expr@(App (App f1 (App f2 (Lit (MachDouble d1)))) (App f3 (Lit (MachDouble d2))))
-    | isDHash f2 && isDHash f3 = do
+mkBinaryCollapse fnE expr@(App (App f1 (App f2 (Lit lit1))) (App f3 (Lit lit2)))
+    | isDHash f2 && isDHash f3, MachDouble d1 <- lit1, MachDouble d2 <- lit2 = do
         let sub = fnE (fromRational d1) (fromRational d2)
         maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x)))
               =<< maybeIEEE (fromJust $ funcName f1) sub
-mkBinaryCollapse fnE expr@(App (App f1 (App f2 (Lit (MachFloat d1)))) (App f3 (Lit (MachFloat d2))))
-    | isFHash f2 && isFHash f3 = do
+    | isFHash f2 && isFHash f3 , MachFloat d1 <- lit1, MachFloat d2 <- lit2 = do
         let sub = fnE (fromRational d1) (fromRational d2)
         maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x)))
               =<< maybeIEEE (fromJust $ funcName f1) sub
