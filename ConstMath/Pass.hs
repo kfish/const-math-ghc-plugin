@@ -1,5 +1,6 @@
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TupleSections #-}
 
 module ConstMath.Pass (
       constMathProgram
@@ -80,7 +81,10 @@ subExpr tab (Let bind e) = do
 
 subExpr tab expr@(Case scrut bndr ty alts) = do
     putMsgS $ tab ++ "Case"
-    return expr
+    let subAlt (ac,bs,eB) = (ac,bs,) <$> subExpr (tab ++ "  ") eB
+    scrut' <- subExpr (tab ++ "  ") scrut
+    alts' <- mapM subAlt alts
+    return (Case scrut' bndr ty alts')
 
 ----------------------------------------------------------------------
 
