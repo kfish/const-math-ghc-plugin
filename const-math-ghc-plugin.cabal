@@ -14,6 +14,7 @@ cabal-version:       >=1.8
 
 library
   exposed-modules:     ConstMath.Plugin
+                       ConstMath.Rules
   other-modules:       ConstMath.Pass
   build-depends:       base < 5,
                        containers,

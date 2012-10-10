@@ -17,68 +17,69 @@ import Var
 
 constMathProgram :: [CoreBind] -> CoreM [CoreBind]
 constMathProgram binds = do
-    mapM subBind binds
+    putMsgS "\nStarting ConstMath pass"
+    mapM (subBind "") binds
 
-subBind :: CoreBind -> CoreM CoreBind
-subBind bndr@(NonRec b rhs) = do
-    putMsgS $ "Non-recursive binding named " ++ showSDoc (ppr b)
-    rhs' <- subExpr rhs
+subBind :: String -> CoreBind -> CoreM CoreBind
+subBind tab bndr@(NonRec b rhs) = do
+    putMsgS $ tab ++ "Non-recursive binding named " ++ showSDoc (ppr b)
+    rhs' <- subExpr tab rhs
     return (NonRec b rhs')
-subBind bndr@(Rec pairs) = do
+subBind tab bndr@(Rec pairs) = do
     mapM (uncurry printRecBind) pairs
     return bndr
 
 printRecBind b _e = do
     putMsgS $ "Recursive binding " ++ showSDoc (ppr b)
 
-subExpr :: CoreExpr -> CoreM CoreExpr
+subExpr :: String -> CoreExpr -> CoreM CoreExpr
 
-subExpr expr@(Type t) = do
-    putMsgS "Type"
+subExpr tab expr@(Type t) = do
+    putMsgS $ tab ++ "Type " ++ showSDoc (ppr t)
     return expr
 
-subExpr expr@(Coercion co) = do
-    putMsgS "Coercion"
+subExpr tab expr@(Coercion co) = do
+    putMsgS $ tab ++ "Coercion"
     return expr
 
-subExpr expr@(Lit lit) = do
-    putMsgS $ "Lit " ++ showSDoc (ppr lit)
+subExpr tab expr@(Lit lit) = do
+    putMsgS $ tab ++ "Lit " ++ showSDoc (ppr lit)
     return expr
 
-subExpr expr@(Var v) = do
-    putMsgS "Var"
+subExpr tab expr@(Var v) = do
+    putMsgS $ tab ++ "Var " ++ showSDoc (ppr v)
     return expr
 
-subExpr (App f a) = do
+subExpr tab (App f a) = do
     let funcName = showSDoc (ppr f)
-    putMsgS $ "App " ++ funcName
-    f' <- subExpr f
-    a' <- subExpr a
+    putMsgS $ tab ++ "App " ++ funcName
+    f' <- subExpr (tab ++ "< ") f
+    a' <- subExpr (tab ++ "> ") a
     collapse (App f' a')
 
-subExpr (Tick t e) = do
-    putMsgS "Tick"
-    e' <- subExpr e
+subExpr tab (Tick t e) = do
+    putMsgS $ tab ++ "Tick"
+    e' <- subExpr (tab ++ "  ") e
     return (Tick t e')
 
-subExpr (Cast e co) = do
-    putMsgS "Cast"
-    e' <- subExpr e
+subExpr tab (Cast e co) = do
+    putMsgS $ tab ++ "Cast"
+    e' <- subExpr (tab ++ "  ") e
     return (Cast e' co)
 
-subExpr (Lam b e) = do
-    putMsgS "Lam"
-    e' <- subExpr e
+subExpr tab (Lam b e) = do
+    putMsgS $ tab ++ "Lam"
+    e' <- subExpr (tab ++ "  ") e
     return (Lam b e')
 
-subExpr (Let bind e) = do
-    putMsgS "Let"
-    bind' <- subBind bind
-    e' <- subExpr e
+subExpr tab (Let bind e) = do
+    putMsgS $ tab ++ "Let"
+    bind' <- subBind tab bind
+    e' <- subExpr (tab ++ "  ") e
     return (Let bind' e')
 
-subExpr expr@(Case scrut bndr ty alts) = do
-    putMsgS "Case"
+subExpr tab expr@(Case scrut bndr ty alts) = do
+    putMsgS $ tab ++ "Case"
     return expr
 
 ----------------------------------------------------------------------
@@ -140,11 +141,17 @@ mkBinaryCollapse _ expr = return expr
 
 fromRationalCollapse :: CoreExpr -> CoreM CoreExpr
 fromRationalCollapse expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
-    | Just "GHC.Real.fromRational" <- funcName f1
+    | Just "ConstMath.Rules.rationalToFloat" <- funcName f1
     , Just "GHC.Real.:%" <- funcName f2
       = do
           let sub = fromRational $ (fromInteger n) / (fromInteger d)
-          maybe (return expr) (\x -> return (App f2 (mkFloatLitFloat x))) =<< maybeIEEE (fromJust $ funcName f1) sub
+          maybe (return expr) (\x -> return (mkFloatExpr x)) =<< maybeIEEE (fromJust $ funcName f1) sub
+fromRationalCollapse expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
+    | Just "ConstMath.Rules.rationalToDouble" <- funcName f1
+    , Just "GHC.Real.:%" <- funcName f2
+      = do
+          let sub = fromRational $ (fromInteger n) / (fromInteger d)
+          maybe (return expr) (\x -> return (mkDoubleExpr x)) =<< maybeIEEE (fromJust $ funcName f1) sub
 fromRationalCollapse expr = return expr
 
 maybeIEEE :: RealFloat a => String -> a -> CoreM (Maybe a)
@@ -220,7 +227,8 @@ subs =
     , unarySubNum "GHC.Num.negate"   negate
     , unarySubNum "GHC.Num.abs"      abs
     , unarySubNum "GHC.Num.signum"   signum
-    , CMSub    "GHC.Real.fromRational" fromRationalCollapse
+    , CMSub    "ConstMath.Rules.rationalToFloat" fromRationalCollapse
+    , CMSub    "ConstMath.Rules.rationalToDouble" fromRationalCollapse
     ]
 
 subFunc :: Map String CMSub
