@@ -26,7 +26,7 @@ parseOpts :: [CommandLineOption] -> Opts
 parseOpts = foldr ($) defaultOpts . map mkArg
     where
         mkArg flag
-            | flag `elem` ["-v","--verbose","--verbosity=1"]    = setVerbosity Basic
+            | flag `elem` ["-v","--verbose","--verbosity=1"]    = setVerbosity (CmVerbose 1)
             | flag `elem` ["-v11", "-verbosity=11","--trace"] = setVerbosity Trace
             | flag `elem` ["-q", "--quiet","--verbosity=0", "-v0"]  = setVerbosity None
             | otherwise = id

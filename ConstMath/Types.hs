@@ -11,7 +11,7 @@ module ConstMath.Types (
 , traced
 ) where
 
-data Verbosity = None | Basic | CmVerbose Int | Trace deriving (Eq, Show, Ord)
+data Verbosity = None | CmVerbose Int | Trace deriving (Eq, Show, Ord)
 
 data Opts = Opts
     { cmVerbosity :: Verbosity }
@@ -21,13 +21,13 @@ setVerbosity :: Verbosity -> Opts -> Opts
 setVerbosity cmVerbosity opts = Opts{cmVerbosity}
 
 defaultOpts :: Opts
-defaultOpts = Opts Basic
+defaultOpts = Opts None
 
 quiet   :: Opts -> Bool
 quiet Opts{cmVerbosity} = cmVerbosity == None
 
 verbose :: Opts -> Bool
-verbose Opts{cmVerbosity} = cmVerbosity > Basic
+verbose Opts{cmVerbosity} = cmVerbosity > CmVerbose 0
 
 traced :: Opts -> Bool
 traced Opts{cmVerbosity} = cmVerbosity >= Trace
