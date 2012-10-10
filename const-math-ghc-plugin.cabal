@@ -19,3 +19,12 @@ library
   build-depends:       base < 5,
                        containers,
                        ghc >= 7.4
+
+------------------------------------------------------------------------
+-- Git repo
+--
+source-repository head
+  type: git
+  location: git://github.com/kfish/const-math-ghc-plugin.git
+
+
