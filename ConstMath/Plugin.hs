@@ -5,6 +5,8 @@ module ConstMath.Plugin (
 import ConstMath.Pass (constMathProgram)
 import GhcPlugins
 
+import Data.List (intersperse)
+
 plugin :: Plugin
 plugin = defaultPlugin {
     installCoreToDos = install
@@ -14,5 +16,6 @@ plugin = defaultPlugin {
 install :: [CommandLineOption] -> [CoreToDo] -> CoreM [CoreToDo]
 install _ todos = do
     reinitializeGlobals
-    return $ CoreDoPasses [constMath] : todos
+    let pass = CoreDoPasses [constMath]
+    return $ intersperse pass todos
   where constMath = CoreDoPluginPass "Constant Math Elimination" (bindsOnlyPass constMathProgram)
