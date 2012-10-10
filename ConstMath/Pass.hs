@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE RankNTypes #-}
 
 module ConstMath.Pass (
       constMathProgram
@@ -88,7 +89,7 @@ collapse expr@(App f1 _)
     = f expr
 collapse expr = return expr
 
-mkUnaryCollapse :: (Double -> Double)
+mkUnaryCollapse :: (forall a. RealFloat a => (a -> a))
                 -> CoreExpr
                 -> CoreM CoreExpr
 mkUnaryCollapse fnE expr@(App f1 (App f2 (Lit (MachDouble d))))
@@ -96,13 +97,23 @@ mkUnaryCollapse fnE expr@(App f1 (App f2 (Lit (MachDouble d))))
         let sub = fnE (fromRational d)
         maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x)))
               =<< maybeIEEE (fromJust $ funcName f1) sub
+mkUnaryCollapse fnE expr@(App f1 (App f2 (Lit (MachFloat d))))
+    | isFHash f2 = do
+        let sub = fnE (fromRational d)
+        maybe (return expr) (\x -> return (App f2 (mkFloatLitFloat x)))
+              =<< maybeIEEE (fromJust $ funcName f1) sub
 mkUnaryCollapse _ expr = return expr
 
-mkBinaryCollapse :: (Double -> Double -> Double)
+mkBinaryCollapse :: (forall a. RealFloat a => (a -> a -> a))
                  -> CoreExpr
                  -> CoreM CoreExpr
 mkBinaryCollapse fnE expr@(App (App f1 (App f2 (Lit (MachDouble d1)))) (App f3 (Lit (MachDouble d2))))
     | isDHash f2 && isDHash f3 = do
+        let sub = fnE (fromRational d1) (fromRational d2)
+        maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x)))
+              =<< maybeIEEE (fromJust $ funcName f1) sub
+mkBinaryCollapse fnE expr@(App (App f1 (App f2 (Lit (MachFloat d1)))) (App f3 (Lit (MachFloat d2))))
+    | isFHash f2 && isFHash f3 = do
         let sub = fnE (fromRational d1) (fromRational d2)
         maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x)))
               =<< maybeIEEE (fromJust $ funcName f1) sub
@@ -114,10 +125,10 @@ fromRationalCollapse expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (Lit
     , Just "GHC.Real.:%" <- funcName f2
       = do
           let sub = fromRational $ (fromInteger n) / (fromInteger d)
-          maybe (return expr) (\x -> return (App f2 (mkDoubleLitDouble x))) =<< maybeIEEE (fromJust $ funcName f1) sub
+          maybe (return expr) (\x -> return (App f2 (mkFloatLitFloat x))) =<< maybeIEEE (fromJust $ funcName f1) sub
 fromRationalCollapse expr = return expr
 
-maybeIEEE :: String -> Double -> CoreM (Maybe Double)
+maybeIEEE :: RealFloat a => String -> a -> CoreM (Maybe a)
 maybeIEEE s d
     | isNaN d = do
         err "NaN"
@@ -144,14 +155,17 @@ data CMSub = CMSub
     , cmSubst    :: CoreExpr -> CoreM CoreExpr
     }
 
-unarySub :: String -> (Double -> Double) -> CMSub
+unarySub :: String -> (forall a. RealFloat a => a -> a) -> CMSub
 unarySub nm fn = CMSub nm (mkUnaryCollapse fn)
 
-binarySub :: String -> (Double -> Double -> Double) -> CMSub
+binarySub :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
 binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
 
 funcName :: CoreExpr -> Maybe String
 funcName = listToMaybe . words . showSDoc . ppr
+
+isFHash :: CoreExpr -> Bool
+isFHash = maybe False ((==) "GHC.Types.F#") . funcName
 
 isDHash :: CoreExpr -> Bool
 isDHash = maybe False ((==) "GHC.Types.D#") . funcName
