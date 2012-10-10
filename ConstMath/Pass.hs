@@ -11,13 +11,11 @@ import ConstMath.Types
 
 import Control.Applicative ((<$>))
 import Control.Monad ((<=<))
-import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 
 import GhcPlugins
-import Var
 
 constMathProgram :: Opts -> [CoreBind] -> CoreM [CoreBind]
 constMathProgram opts binds = do
@@ -29,7 +27,7 @@ subBind opts tab (NonRec b rhs) = do
     traceMsg opts $ tab ++ "Non-recursive binding named " ++ showSDoc (ppr b)
     rhs' <- subExpr opts tab rhs
     return (NonRec b rhs')
-subBind opts tab bndr@(Rec pairs) = do
+subBind opts _tab bndr@(Rec pairs) = do
     _ <- mapM (uncurry $ printRecBind opts) pairs
     return bndr
 
@@ -115,7 +113,7 @@ mkUnaryCollapseNum :: (forall a . Num a => (a -> a))
                    -> Opts
                    -> CoreExpr
                    -> CoreM CoreExpr
-mkUnaryCollapseNum fnE opts (App _f1 (App f2 (Lit lit)))
+mkUnaryCollapseNum fnE _opts (App _f1 (App f2 (Lit lit)))
     | isDHash f2, MachDouble d <- lit =
         evalUnaryNum fromRational d mkDoubleLitDouble
     | isFHash f2, MachFloat d  <- lit =
@@ -247,16 +245,16 @@ subFunc = Map.fromList $ zip (map cmFuncName subs) subs
 ----------------------------------------------------------------------
 
 msg :: Opts -> String -> CoreM ()
-msg opts msg
-    | not (quiet opts) = putMsgS msg
+msg opts s
+    | not (quiet opts) = putMsgS s
     | otherwise = return ()
 
 vMsg :: Opts -> String -> CoreM ()
-vMsg opts msg
-    | verbose opts = putMsgS msg
+vMsg opts s
+    | verbose opts = putMsgS s
     | otherwise    = return ()
 
 traceMsg :: Opts -> String -> CoreM ()
-traceMsg opts msg
-    | traced opts = putMsgS msg
+traceMsg opts s
+    | traced opts = putMsgS s
     | otherwise   = return ()
