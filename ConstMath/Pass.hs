@@ -126,12 +126,24 @@ findSub :: CoreExpr -> Maybe CMSub
 findSub = flip Map.lookup subFunc <=< funcName
 
 subs =
-    [ CMSub "GHC.Float.sqrt"   sqrt
-    , CMSub "GHC.Float.exp"    exp
+    [ CMSub "GHC.Float.exp"    exp
     , CMSub "GHC.Float.log"    log
+    , CMSub "GHC.Float.sqrt"   sqrt
     , CMSub "GHC.Float.sin"    sin
     , CMSub "GHC.Float.cos"    cos
+    , CMSub "GHC.Float.tan"    tan
+    , CMSub "GHC.Float.asin"   asin
+    , CMSub "GHC.Float.acos"   acos
+    , CMSub "GHC.Float.atan"   atan
+    , CMSub "GHC.Float.sinh"   sinh
+    , CMSub "GHC.Float.cosh"   cosh
+    , CMSub "GHC.Float.tanh"   tanh
+    , CMSub "GHC.Float.asinh"  asinh
+    , CMSub "GHC.Float.acosh"  acosh
+    , CMSub "GHC.Float.atanh"  atanh
     , CMSub "GHC.Num.negate"   negate
+    , CMSub "GHC.Num.abs"      abs
+    , CMSub "GHC.Num.signum"   signum
     ]
 
 subFunc :: Map String CMSub
