@@ -12,7 +12,6 @@ plugin = defaultPlugin {
     installCoreToDos = install
   }
 
--- You should probably run this with -fno-cse !
 install :: [CommandLineOption] -> [CoreToDo] -> CoreM [CoreToDo]
 install _ todos = do
     reinitializeGlobals
