@@ -1,5 +1,6 @@
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE RankNTypes #-}
+{-# OPTIONS_GHC -Wall #-}
 
 module ConstMath.Pass (
       constMathProgram
