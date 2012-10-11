@@ -43,7 +43,7 @@ subExpr opts tab expr@(Type t) = do
     return expr
 
 subExpr opts tab expr@(Coercion _co) = do
-    traceMsg opts $ tab ++ "Coercion"
+    traceMsg opts (tab ++ "Coercion")
     return expr
 
 subExpr opts tab expr@(Lit lit) = do
@@ -66,23 +66,23 @@ subExpr opts tab (Tick t e) = do
     return (Tick t e')
 
 subExpr opts tab (Cast e co) = do
-    traceMsg opts $ tab ++ "Cast"
+    traceMsg opts (tab ++ "Cast")
     e' <- subExpr opts (tab ++ "  ") e
     return (Cast e' co)
 
 subExpr opts tab (Lam b e) = do
-    traceMsg opts $ tab ++ "Lam"
+    traceMsg opts (tab ++ "Lam")
     e' <- subExpr opts (tab ++ "  ") e
     return (Lam b e')
 
 subExpr opts tab (Let bind e) = do
-    traceMsg opts $ tab ++ "Let"
+    traceMsg opts (tab ++ "Let")
     bind' <- subBind opts tab bind
     e' <- subExpr opts (tab ++ "  ") e
     return (Let bind' e')
 
 subExpr opts tab (Case scrut bndr ty alts) = do
-    traceMsg opts $ tab ++ "Case"
+    traceMsg opts (tab ++ "Case")
     let subAlt (ac,bs,eB) = (ac,bs,) <$> subExpr opts (tab ++ "  ") eB
     scrut' <- subExpr opts (tab ++ "  ") scrut
     alts' <- mapM subAlt alts
