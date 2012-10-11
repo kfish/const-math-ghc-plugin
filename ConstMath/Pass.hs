@@ -288,8 +288,10 @@ pretty = return . showSDoc . ppr
 #endif
 
 prettyExpr :: CoreExpr -> String
-prettyExpr (Var var) = let n = varName var in
-      (moduleNameString . moduleName . nameModule $ n) ++ "." ++
-      (unpackFS . occNameFS . nameOccName $ n)
+prettyExpr (Var var) = m ++ (unpackFS . occNameFS . nameOccName $ n)
+    where
+      n = varName var
+      m | isExternalName n = (moduleNameString . moduleName . nameModule $ n) ++ "."
+        | otherwise        = ""
 prettyExpr (App f _) = prettyExpr f
 prettyExpr _         = "<unknown>"
