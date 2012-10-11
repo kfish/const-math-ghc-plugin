@@ -32,6 +32,7 @@ subBind opts _tab bndr@(Rec pairs) = do
     _ <- mapM (uncurry $ printRecBind opts) pairs
     return bndr
 
+printRecBind :: Opts -> CoreBndr -> Expr CoreBndr -> CoreM ()
 printRecBind opts b _e = do
     tracePretty opts "Recursive binding " b
 
