@@ -18,7 +18,7 @@ data Opts = Opts
     deriving (Eq, Show)
 
 setVerbosity :: Verbosity -> Opts -> Opts
-setVerbosity cmVerbosity opts = Opts{cmVerbosity}
+setVerbosity cmVerbosity opts = opts{cmVerbosity}
 
 defaultOpts :: Opts
 defaultOpts = Opts None
