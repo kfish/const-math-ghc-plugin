@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
@@ -24,7 +25,7 @@ constMathProgram opts binds = do
 
 subBind :: Opts -> String -> CoreBind -> CoreM CoreBind
 subBind opts tab (NonRec b rhs) = do
-    traceMsg opts $ tab ++ "Non-recursive binding named " ++ pretty b
+    tracePretty opts (tab ++ "Non-recursive binding named ") b
     rhs' <- subExpr opts tab rhs
     return (NonRec b rhs')
 subBind opts _tab bndr@(Rec pairs) = do
@@ -32,12 +33,12 @@ subBind opts _tab bndr@(Rec pairs) = do
     return bndr
 
 printRecBind opts b _e = do
-    traceMsg opts $ "Recursive binding " ++ pretty b
+    tracePretty opts "Recursive binding " b
 
 subExpr :: Opts -> String -> CoreExpr -> CoreM CoreExpr
 
 subExpr opts tab expr@(Type t) = do
-    traceMsg opts $ tab ++ "Type " ++ pretty t
+    tracePretty opts (tab ++ "Type ") t
     return expr
 
 subExpr opts tab expr@(Coercion _co) = do
@@ -45,15 +46,15 @@ subExpr opts tab expr@(Coercion _co) = do
     return expr
 
 subExpr opts tab expr@(Lit lit) = do
-    traceMsg opts $ tab ++ "Lit " ++ pretty lit
+    tracePretty opts (tab ++ "Lit ") lit
     return expr
 
 subExpr opts tab expr@(Var v) = do
-    traceMsg opts $ tab ++ "Var " ++ pretty v
+    tracePretty opts (tab ++ "Var ") v
     return expr
 
 subExpr opts tab (App f a) = do
-    traceMsg opts $ tab ++ "App " ++ pretty f
+    tracePretty opts (tab ++ "App ") f
     f' <- subExpr opts (tab ++ "< ") f
     a' <- subExpr opts (tab ++ "> ") a
     collapse opts (App f' a')
@@ -209,7 +210,7 @@ binarySub :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
 binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
 
 funcName :: CoreExpr -> Maybe String
-funcName = listToMaybe . words . pretty
+funcName = listToMaybe . words . prettyExpr
 
 isFHash :: CoreExpr -> Bool
 isFHash = maybe False ((==) "GHC.Types.F#") . funcName
@@ -270,7 +271,25 @@ traceMsg opts s
     | traced opts = putMsgS s
     | otherwise   = return ()
 
+tracePretty :: Outputable a => Opts -> String -> a -> CoreM ()
+tracePretty opts s x = do
+    p <- pretty x
+    traceMsg opts (s ++ p)
+
 ----------------------------------------------------------------------
 
-pretty :: Outputable a => a -> String
-pretty = showSDoc . ppr
+pretty :: Outputable a => a -> CoreM String
+#if __GLASGOW_HASKELL__ >= 706
+pretty x = do
+    dflags <- getDynFlags
+    return $ showSDoc dflags (ppr x)
+#else
+pretty = return . showSDoc . ppr
+#endif
+
+prettyExpr :: CoreExpr -> String
+prettyExpr (Var var) = let n = varName var in
+      (moduleNameString . moduleName . nameModule $ n) ++ "." ++
+      (unpackFS . occNameFS . nameOccName $ n)
+prettyExpr (App f _) = prettyExpr f
+prettyExpr _         = "<unknown>"
