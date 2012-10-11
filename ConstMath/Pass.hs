@@ -24,7 +24,7 @@ constMathProgram opts binds = do
 
 subBind :: Opts -> String -> CoreBind -> CoreM CoreBind
 subBind opts tab (NonRec b rhs) = do
-    traceMsg opts $ tab ++ "Non-recursive binding named " ++ showSDoc (ppr b)
+    traceMsg opts $ tab ++ "Non-recursive binding named " ++ pretty b
     rhs' <- subExpr opts tab rhs
     return (NonRec b rhs')
 subBind opts _tab bndr@(Rec pairs) = do
@@ -32,12 +32,12 @@ subBind opts _tab bndr@(Rec pairs) = do
     return bndr
 
 printRecBind opts b _e = do
-    traceMsg opts $ "Recursive binding " ++ showSDoc (ppr b)
+    traceMsg opts $ "Recursive binding " ++ pretty b
 
 subExpr :: Opts -> String -> CoreExpr -> CoreM CoreExpr
 
 subExpr opts tab expr@(Type t) = do
-    traceMsg opts $ tab ++ "Type " ++ showSDoc (ppr t)
+    traceMsg opts $ tab ++ "Type " ++ pretty t
     return expr
 
 subExpr opts tab expr@(Coercion _co) = do
@@ -45,15 +45,15 @@ subExpr opts tab expr@(Coercion _co) = do
     return expr
 
 subExpr opts tab expr@(Lit lit) = do
-    traceMsg opts $ tab ++ "Lit " ++ showSDoc (ppr lit)
+    traceMsg opts $ tab ++ "Lit " ++ pretty lit
     return expr
 
 subExpr opts tab expr@(Var v) = do
-    traceMsg opts $ tab ++ "Var " ++ showSDoc (ppr v)
+    traceMsg opts $ tab ++ "Var " ++ pretty v
     return expr
 
 subExpr opts tab (App f a) = do
-    traceMsg opts $ tab ++ "App " ++ showSDoc (ppr f)
+    traceMsg opts $ tab ++ "App " ++ pretty f
     f' <- subExpr opts (tab ++ "< ") f
     a' <- subExpr opts (tab ++ "> ") a
     collapse opts (App f' a')
@@ -209,7 +209,7 @@ binarySub :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
 binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
 
 funcName :: CoreExpr -> Maybe String
-funcName = listToMaybe . words . showSDoc . ppr
+funcName = listToMaybe . words . pretty
 
 isFHash :: CoreExpr -> Bool
 isFHash = maybe False ((==) "GHC.Types.F#") . funcName
@@ -269,3 +269,8 @@ traceMsg :: Opts -> String -> CoreM ()
 traceMsg opts s
     | traced opts = putMsgS s
     | otherwise   = return ()
+
+----------------------------------------------------------------------
+
+pretty :: Outputable a => a -> String
+pretty = showSDoc . ppr
