@@ -210,23 +210,37 @@ unarySubNum nm fn = CMSub nm (mkUnaryCollapseNum fn)
 binarySub :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
 binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
 
-funcName :: CoreExpr -> Maybe String
-funcName = listToMaybe . words . prettyExpr
+----------------------------------------------------------------------
 
 isFHash :: CoreExpr -> Bool
-isFHash = maybe False ((==) "GHC.Types.F#") . funcName
+isFHash = funcIs "GHC.Types.F#"
 
 isDHash :: CoreExpr -> Bool
-isDHash = maybe False ((==) "GHC.Types.D#") . funcName
+isDHash = funcIs "GHC.Types.D#"
 
 isIHash :: CoreExpr -> Bool
-isIHash = maybe False ((==) "GHC.Types.I#") . funcName
+isIHash = funcIs "GHC.Types.I#"
 
 isWHash :: CoreExpr -> Bool
-isWHash = maybe False ((==) "GHC.Word.W#") . funcName
+isWHash = funcIs "GHC.Word.W#"
+
+funcIs :: String -> CoreExpr -> Bool
+funcIs s = maybe False (== s) . funcName
+
+funcName :: CoreExpr -> Maybe String
+funcName (Var var) = Just $ m ++ (unpackFS . occNameFS . nameOccName $ n)
+    where
+      n = varName var
+      m | isExternalName n = (moduleNameString . moduleName . nameModule $ n) ++ "."
+        | otherwise        = ""
+funcName (App f _) = funcName f
+funcName _         = Nothing
 
 findSub :: CoreExpr -> Maybe CMSub
 findSub = flip Map.lookup subFunc <=< funcName
+
+subFunc :: Map String CMSub
+subFunc = Map.fromList $ zip (map cmFuncName subs) subs
 
 subs :: [CMSub]
 subs =
@@ -245,15 +259,12 @@ subs =
     , unarySubIEEE "GHC.Float.asinh"  asinh
     , unarySubIEEE "GHC.Float.acosh"  acosh
     , unarySubIEEE "GHC.Float.atanh"  atanh
-    , unarySubNum "GHC.Num.negate"   negate
-    , unarySubNum "GHC.Num.abs"      abs
-    , unarySubNum "GHC.Num.signum"   signum
-    , CMSub    "ConstMath.Rules.rationalToFloat" fromRationalCollapse
-    , CMSub    "ConstMath.Rules.rationalToDouble" fromRationalCollapse
+    , unarySubNum  "GHC.Num.negate"   negate
+    , unarySubNum  "GHC.Num.abs"      abs
+    , unarySubNum  "GHC.Num.signum"   signum
+    , CMSub "ConstMath.Rules.rationalToFloat"  fromRationalCollapse
+    , CMSub "ConstMath.Rules.rationalToDouble" fromRationalCollapse
     ]
-
-subFunc :: Map String CMSub
-subFunc = Map.fromList $ zip (map cmFuncName subs) subs
 
 ----------------------------------------------------------------------
 
@@ -288,11 +299,3 @@ pretty x = do
 pretty = return . showSDoc . ppr
 #endif
 
-prettyExpr :: CoreExpr -> String
-prettyExpr (Var var) = m ++ (unpackFS . occNameFS . nameOccName $ n)
-    where
-      n = varName var
-      m | isExternalName n = (moduleNameString . moduleName . nameModule $ n) ++ "."
-        | otherwise        = ""
-prettyExpr (App f _) = prettyExpr f
-prettyExpr _         = "<unknown>"
