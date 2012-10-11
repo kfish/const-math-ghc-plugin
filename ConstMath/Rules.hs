@@ -36,8 +36,3 @@ rationalToDouble (n:%d)
         minEx       = fst (floatRange (0 :: Double))
         mantDigs    = floatDigits (0 :: Double)
 {-# NOINLINE [1] rationalToDouble #-}
-
-{-# RULES
-"ConstMath/rationalToFloat"  fromRational = rationalToFloat
-"ConstMath/rationalToDouble" fromRational = rationalToDouble
-      #-}

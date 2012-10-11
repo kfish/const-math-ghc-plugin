@@ -160,19 +160,19 @@ mkBinaryCollapse fnE opts expr@(App (App f1 (App f2 (Lit lit1))) (App f3 (Lit li
 mkBinaryCollapse _ _ expr = return expr
 
 fromRationalCollapse :: Opts -> CoreExpr -> CoreM CoreExpr
-fromRationalCollapse opts expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
-    | Just "ConstMath.Rules.rationalToFloat" <- funcName f1
+fromRationalCollapse opts expr@(App f1@(Var frFn) (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
+    | Just (_arg,res) <- splitFunTy_maybe $ varType frFn
     , Just "GHC.Real.:%" <- funcName f2
-      = do
-          let sub = fromRational $ (fromInteger n) / (fromInteger d)
-          maybe (return expr) (\x -> return (mkFloatExpr x)) =<< maybeIEEE opts (fromJust $ funcName f1) sub
-fromRationalCollapse opts expr@(App f1 (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
-    | Just "ConstMath.Rules.rationalToDouble" <- funcName f1
-    , Just "GHC.Real.:%" <- funcName f2
-      = do
-          let sub = fromRational $ (fromInteger n) / (fromInteger d)
-          maybe (return expr) (\x -> return (mkDoubleExpr x)) =<< maybeIEEE opts (fromJust $ funcName f1) sub
-fromRationalCollapse _ expr = return expr
+    , Just fnNm <- funcName f1
+      = case () of
+          _ | res `eqType` floatTy -> do
+              let sub = fromRational $ (fromInteger n) / (fromInteger d)
+              maybe (return expr) (\x -> return (mkFloatExpr x)) =<< maybeIEEE opts (fnNm) sub
+            | res `eqType` doubleTy -> do
+              let sub = fromRational $ (fromInteger n) / (fromInteger d)
+              maybe (return expr) (\x -> return (mkDoubleExpr x)) =<< maybeIEEE opts (fnNm) sub
+            | otherwise -> return expr
+fromRationalCollapse opts expr = return expr
 
 maybeIEEE :: RealFloat a => Opts -> String -> a -> CoreM (Maybe a)
 maybeIEEE opts s d
@@ -248,8 +248,9 @@ subs =
     , unarySubNum "GHC.Num.negate"   negate
     , unarySubNum "GHC.Num.abs"      abs
     , unarySubNum "GHC.Num.signum"   signum
-    , CMSub    "ConstMath.Rules.rationalToFloat" fromRationalCollapse
-    , CMSub    "ConstMath.Rules.rationalToDouble" fromRationalCollapse
+    , CMSub    "GHC.Real.fromRational" fromRationalCollapse
+    , CMSub    "GHC.Float.$fFractionalFloat_$cfromRational" fromRationalCollapse
+    , CMSub    "GHC.Float.$fFractionalDouble_$cfromRational" fromRationalCollapse
     ]
 
 subFunc :: Map String CMSub
