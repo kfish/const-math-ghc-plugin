@@ -12,6 +12,12 @@ category:            Compiler Plugin
 build-type:          Simple
 cabal-version:       >=1.8
 
+-- tests/*.hs shouldn't have to go here, but the source files
+-- for the test-suite stanzas don't get picked up by 'cabal sdist'.
+Extra-source-files:
+  tests/*.hs
+  tests/Makefile
+
 library
   exposed-modules:     ConstMath.Plugin
                        ConstMath.Rules
@@ -21,11 +27,17 @@ library
                        containers,
                        ghc >= 7.4
 
+Test-suite tests
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      tests
+  main-is:             Make.hs
+  build-depends:       base < 5,
+                       directory,
+                       process
+
 ------------------------------------------------------------------------
 -- Git repo
 --
 source-repository head
   type: git
   location: git://github.com/kfish/const-math-ghc-plugin.git
-
-
