@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 {-# OPTIONS_HADDOCK hide #-}
 
-module ConstMath.Rules (
+module ConstMath.Rules {-# DEPRECATED "no longer necessary" #-} (
   rationalToFloat
 , rationalToDouble
 ) where
