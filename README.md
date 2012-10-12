@@ -9,11 +9,11 @@ Using this plugin adds a compiler pass which replaces mathematical
 expressions on constant numeric values with the result of that
 expression. Supported expressions include:
 
-    * unary RealFloat functions (exp, log, sqrt, sin, cos, tan,
-      asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh)
-    * unary Num functions (negate, abs, signum).
-    * fromRational
-    * (**)
+* unary RealFloat functions (exp, log, sqrt, sin, cos, tan,
+  asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh)
+* unary Num functions (negate, abs, signum).
+* fromRational
+* (**)
 
 Basic arithmetic expressions (addition, subtraction, multiplication,
 division) are already eliminated by existing GHC passes. This plugin
@@ -56,7 +56,7 @@ Option arguments can be passed to the plugin with -fplugin-opt:
 
     $ ghc -fplugin ConstMath.Plugin -fplugin-opt=ConstMath.Plugin:ARG foo.hs
 
-currently available arguments are:
+Currently available arguments are:
 
     --dry, --dry-run
         Don't make any substitutions, just report on matches
