@@ -358,12 +358,3 @@ pretty x = do
 #else
 pretty = return . showSDoc . ppr
 #endif
-
-prettyExpr :: CoreExpr -> String
-prettyExpr (Var var) = m ++ (unpackFS . occNameFS . nameOccName $ n)
-    where
-      n = varName var
-      m | isExternalName n = (moduleNameString . moduleName . nameModule $ n) ++ "."
-        | otherwise        = ""
-prettyExpr (App f _) = prettyExpr f
-prettyExpr _         = "<unknown>"
