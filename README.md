@@ -29,18 +29,8 @@ currently available arguments are
 
 # More dakka:
 
-In some cases, there are opportunities for constant folding that the
-plugin can't find on its own.  By including the line
-
-  import ConstMath.Rules
-
-in one of your project's modules, extra ghc RULES will be imported which expose
-more opportunities for optimization.
-
-ConstMath.Rules only needs to be imported once, preferably in the first module
-GHC builds for your project.
-
-We plan to remove the extra step in the future.
+More dakka is now built-in.  ConstMath.Rules does nothing, and will be removed
+in a future release.
 
 [travis-ci.org](http://travis-ci.org) results: [![Build
 Status](https://secure.travis-ci.org/kfish/const-math-ghc-plugin.png?branch=master)](http://travis-ci.org/kfish/const-math-ghc-plugin)
