@@ -61,7 +61,7 @@ subExpr opts tab (App f a) = do
     collapse opts (App f' a')
 
 subExpr opts tab (Tick t e) = do
-    traceMsg opts $ tab ++ "Tick"
+    traceMsg opts (tab ++ "Tick")
     e' <- subExpr opts (tab ++ "  ") e
     return (Tick t e')
 
