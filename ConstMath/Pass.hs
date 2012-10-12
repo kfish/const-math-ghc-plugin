@@ -166,6 +166,26 @@ mkBinaryCollapse fnE opts expr@(App (App f1 (App f2 (Lit lit1))) (App f3 (Lit li
                   =<< maybeIEEE opts (fromJust $ funcName f1) sub
 mkBinaryCollapse _ _ expr = return expr
 
+----------------------------------------------------------------------
+-- primop collapsing functions
+
+mkUnaryCollapsePrimIEEE :: (forall a. RealFloat a => (a -> a))
+                        -> Opts
+                        -> CoreExpr
+                        -> CoreM CoreExpr
+mkUnaryCollapsePrimIEEE fnE opts expr@(App f1 (Lit lit))
+    | MachDouble d <- lit = e d mkDoubleLitDouble
+    | MachFloat  d <- lit = e d mkFloatLitFloat
+    where
+      e d mkLit = let sub = fnE (fromRational d)
+                  in  maybe (return expr)
+                        (return . mkLit)
+                        =<< maybeIEEE opts (fromJust $ funcName f1) sub
+mkUnaryCollapsePrimIEEE _ _ expr = return expr
+
+----------------------------------------------------------------------
+-- specialized collapsing functions
+
 fromRationalCollapse :: Opts -> CoreExpr -> CoreM CoreExpr
 fromRationalCollapse opts expr@(App f1@(Var frFn) (App (App f2 (Lit (LitInteger n _))) (Lit (LitInteger d _))))
     | Just (_arg,res) <- splitFunTy_maybe $ varType frFn
@@ -219,6 +239,9 @@ unarySubNum nm fn = CMSub nm (mkUnaryCollapseNum fn)
 binarySub :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
 binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
 
+unaryPrimIEEE :: String -> (forall a. RealFloat a => a -> a) -> CMSub
+unaryPrimIEEE nm fn = CMSub nm (mkUnaryCollapsePrimIEEE fn)
+
 ----------------------------------------------------------------------
 
 isFHash :: CoreExpr -> Bool
@@ -271,6 +294,21 @@ subs =
     , unarySubNum "GHC.Num.negate"   negate
     , unarySubNum "GHC.Num.abs"      abs
     , unarySubNum "GHC.Num.signum"   signum
+    -- PrimOp substitutions
+    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" exp
+    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" log
+    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" sqrt
+    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" sin
+    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" cos
+    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" tan
+
+    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" exp
+    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" log
+    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" sqrt
+    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" sin
+    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" cos
+    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" tan
+    -- Specialized substitutions
     , CMSub    "GHC.Real.fromRational" fromRationalCollapse
     , CMSub    "GHC.Float.$fFractionalFloat_$cfromRational" fromRationalCollapse
     , CMSub    "GHC.Float.$fFractionalDouble_$cfromRational" fromRationalCollapse
