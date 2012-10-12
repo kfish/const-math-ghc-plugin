@@ -1,14 +1,36 @@
 name:                const-math-ghc-plugin
-version:             0.2.0.0
+version:             0.3.0.0
 synopsis:            Compiler plugin for constant math elimination
 description:         
-  This library implements elimination of constant math expressions.
+    This plugin evaluates constant math expressions at compile-time.
+    .
+    For details and full usage information, see;
+    .
+    <https://github.com/kfish/const-math-ghc-plugin>
+    .
+    To use it to compile /foo.hs/:
+    .
+    @
+        $ cabal install const-math-ghc-plugin
+        $ ghc -fplugin ConstMath.Plugin foo.hs
+    @
+    .
+    To use it to build a cabal package /packagename/:
+    .
+    @
+        $ cabal install --ghc-options="-package const-math-ghc-plugin -fplugin ConstMath.Plugin" packagename
+    @
+    .
+    Math should run faster.
+    .
+
 license:             BSD3
 license-file:        LICENSE
 author:              Conrad Parker, John Lato
 maintainer:          Conrad Parker <conrad@metadecks.org>
 -- copyright:           
 category:            Compiler Plugin
+homepage:            https://github.com/kfish/const-math-ghc-plugin
 build-type:          Simple
 cabal-version:       >=1.8
 
