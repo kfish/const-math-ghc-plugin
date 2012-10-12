@@ -43,7 +43,7 @@ subExpr opts tab expr@(Type t) = do
     return expr
 
 subExpr opts tab expr@(Coercion _co) = do
-    traceMsg opts $ tab ++ "Coercion"
+    traceMsg opts (tab ++ "Coercion")
     return expr
 
 subExpr opts tab expr@(Lit lit) = do
@@ -66,23 +66,23 @@ subExpr opts tab (Tick t e) = do
     return (Tick t e')
 
 subExpr opts tab (Cast e co) = do
-    traceMsg opts $ tab ++ "Cast"
+    traceMsg opts (tab ++ "Cast")
     e' <- subExpr opts (tab ++ "  ") e
     return (Cast e' co)
 
 subExpr opts tab (Lam b e) = do
-    traceMsg opts $ tab ++ "Lam"
+    traceMsg opts (tab ++ "Lam")
     e' <- subExpr opts (tab ++ "  ") e
     return (Lam b e')
 
 subExpr opts tab (Let bind e) = do
-    traceMsg opts $ tab ++ "Let"
+    traceMsg opts (tab ++ "Let")
     bind' <- subBind opts tab bind
     e' <- subExpr opts (tab ++ "  ") e
     return (Let bind' e')
 
 subExpr opts tab (Case scrut bndr ty alts) = do
-    traceMsg opts $ tab ++ "Case"
+    traceMsg opts (tab ++ "Case")
     let subAlt (ac,bs,eB) = (ac,bs,) <$> subExpr opts (tab ++ "  ") eB
     scrut' <- subExpr opts (tab ++ "  ") scrut
     alts' <- mapM subAlt alts
@@ -210,23 +210,37 @@ unarySubNum nm fn = CMSub nm (mkUnaryCollapseNum fn)
 binarySub :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
 binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
 
-funcName :: CoreExpr -> Maybe String
-funcName = listToMaybe . words . prettyExpr
+----------------------------------------------------------------------
 
 isFHash :: CoreExpr -> Bool
-isFHash = maybe False ((==) "GHC.Types.F#") . funcName
+isFHash = funcIs "GHC.Types.F#"
 
 isDHash :: CoreExpr -> Bool
-isDHash = maybe False ((==) "GHC.Types.D#") . funcName
+isDHash = funcIs "GHC.Types.D#"
 
 isIHash :: CoreExpr -> Bool
-isIHash = maybe False ((==) "GHC.Types.I#") . funcName
+isIHash = funcIs "GHC.Types.I#"
 
 isWHash :: CoreExpr -> Bool
-isWHash = maybe False ((==) "GHC.Word.W#") . funcName
+isWHash = funcIs "GHC.Word.W#"
+
+funcIs :: String -> CoreExpr -> Bool
+funcIs s = maybe False (== s) . funcName
+
+funcName :: CoreExpr -> Maybe String
+funcName (Var var) = Just $ m ++ (unpackFS . occNameFS . nameOccName $ n)
+    where
+      n = varName var
+      m | isExternalName n = (moduleNameString . moduleName . nameModule $ n) ++ "."
+        | otherwise        = ""
+funcName (App f _) = funcName f
+funcName _         = Nothing
 
 findSub :: CoreExpr -> Maybe CMSub
 findSub = flip Map.lookup subFunc <=< funcName
+
+subFunc :: Map String CMSub
+subFunc = Map.fromList $ zip (map cmFuncName subs) subs
 
 subs :: [CMSub]
 subs =
@@ -252,9 +266,6 @@ subs =
     , CMSub    "GHC.Float.$fFractionalFloat_$cfromRational" fromRationalCollapse
     , CMSub    "GHC.Float.$fFractionalDouble_$cfromRational" fromRationalCollapse
     ]
-
-subFunc :: Map String CMSub
-subFunc = Map.fromList $ zip (map cmFuncName subs) subs
 
 ----------------------------------------------------------------------
 
