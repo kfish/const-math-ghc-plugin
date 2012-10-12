@@ -172,7 +172,7 @@ fromRationalCollapse opts expr@(App f1@(Var frFn) (App (App f2 (Lit (LitInteger 
               let sub = fromRational $ (fromInteger n) / (fromInteger d)
               maybe (return expr) (\x -> return (mkDoubleExpr x)) =<< maybeIEEE opts (fnNm) sub
             | otherwise -> return expr
-fromRationalCollapse opts expr = return expr
+fromRationalCollapse _opts expr = return expr
 
 maybeIEEE :: RealFloat a => Opts -> String -> a -> CoreM (Maybe a)
 maybeIEEE opts s d
