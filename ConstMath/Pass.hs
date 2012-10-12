@@ -9,6 +9,7 @@ module ConstMath.Pass (
 ) where
 
 import ConstMath.Types
+import ConstMath.PrimRules
 
 import Control.Applicative ((<$>))
 import Control.Monad ((<=<))
@@ -315,39 +316,15 @@ subs =
     , unarySubNum "GHC.Num.negate"    negate
     , unarySubNum "GHC.Num.abs"       abs
     , unarySubNum "GHC.Num.signum"    signum
-    -- PrimOp substitutions
-    , unaryPrimIEEE  "GHC.Prim.expDouble#"    exp
-    , unaryPrimIEEE  "GHC.Prim.logDouble#"    log
-    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#"   sqrt
-    , unaryPrimIEEE  "GHC.Prim.sinDouble#"    sin
-    , unaryPrimIEEE  "GHC.Prim.cosDouble#"    cos
-    , unaryPrimIEEE  "GHC.Prim.tanDouble#"    tan
-    , unaryPrimIEEE  "GHC.Prim.asinDouble#"   asin
-    , unaryPrimIEEE  "GHC.Prim.acosDouble#"   acos
-    , unaryPrimIEEE  "GHC.Prim.atanDouble#"   atan
-    , unaryPrimIEEE  "GHC.Prim.sinhDouble#"   sinh
-    , unaryPrimIEEE  "GHC.Prim.coshDouble#"   cosh
-    , unaryPrimIEEE  "GHC.Prim.tanhDouble#"   tanh
-    , binaryPrimIEEE "GHC.Prim.**##"          (**)  -- DoublePowerOp
 
-    , unaryPrimIEEE  "GHC.Prim.expFloat#"     exp
-    , unaryPrimIEEE  "GHC.Prim.logFloat#"     log
-    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#"    sqrt
-    , unaryPrimIEEE  "GHC.Prim.sinFloat#"     sin
-    , unaryPrimIEEE  "GHC.Prim.cosFloat#"     cos
-    , unaryPrimIEEE  "GHC.Prim.tanFloat#"     tan
-    , unaryPrimIEEE  "GHC.Prim.asinFloat#"    asin
-    , unaryPrimIEEE  "GHC.Prim.acosFloat#"    acos
-    , unaryPrimIEEE  "GHC.Prim.atanFloat#"    atan
-    , unaryPrimIEEE  "GHC.Prim.sinhFloat#"    sinh
-    , unaryPrimIEEE  "GHC.Prim.coshFloat#"    cosh
-    , unaryPrimIEEE  "GHC.Prim.tanhFloat#"    tanh
-    , binaryPrimIEEE "GHC.Prim.powerFloat#"   (**)  -- FloatPowerOp
     -- Specialized substitutions
     , CMSub    "GHC.Real.fromRational" fromRationalCollapse
     , CMSub    "GHC.Float.$fFractionalFloat_$cfromRational" fromRationalCollapse
     , CMSub    "GHC.Float.$fFractionalDouble_$cfromRational" fromRationalCollapse
     ]
+    -- PrimOp substitutions
+    ++ map (uncurry unaryPrimIEEE)  unaryPrimRules
+    ++ map (uncurry binaryPrimIEEE) binaryPrimRules
 
 ----------------------------------------------------------------------
 

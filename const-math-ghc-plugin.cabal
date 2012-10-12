@@ -21,7 +21,15 @@ Extra-source-files:
 library
   exposed-modules:     ConstMath.Plugin
   other-modules:       ConstMath.Pass
+                       ConstMath.PrimRules
                        ConstMath.Types
+
+  -- get the appropriate PrimRules list for this ghc version
+  if impl(ghc == 7.4.*)
+    other-modules:     ConstMath.PrimRules.V704
+  if impl(ghc == 7.6.*)
+    other-modules:     ConstMath.PrimRules.V706
+
   build-depends:       base < 5,
                        containers,
                        ghc >= 7.4
