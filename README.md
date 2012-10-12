@@ -30,11 +30,6 @@ currently available arguments are
   -q, --quiet
       no output
 
-# More dakka:
-
-More dakka is now built-in.  ConstMath.Rules does nothing, and will be removed
-in a future release.
-
 [travis-ci.org](http://travis-ci.org) results: [![Build
 Status](https://secure.travis-ci.org/kfish/const-math-ghc-plugin.png?branch=master)](http://travis-ci.org/kfish/const-math-ghc-plugin)
 
