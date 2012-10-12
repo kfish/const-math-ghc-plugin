@@ -136,9 +136,16 @@ mkUnaryCollapseNum fnE opts expr@(App f1 (App f2 (Lit lit)))
     | isWHash f2, MachWord d   <- lit =
         evalUnaryNum fromIntegral d mkWordLitWord
     where
-        evalUnaryNum from d mkLit = do
-            let sub = fnE (from d)
-            return (App f2 (mkLit sub))
+        msgResult = msg opts $ "Result of replacing " ++ (fromJust (funcName f1)) ++ " is ok"
+        evalUnaryNum from d mkLit
+            | dry opts  = do
+                msgResult
+                msg opts "dry running, skipping replacement"
+                return expr
+            | otherwise = do
+                let sub = fnE (from d)
+                msgResult
+                return (App f2 (mkLit sub))
 mkUnaryCollapseNum _ _ expr = return expr
 
 mkBinaryCollapse :: (forall a. RealFloat a => (a -> a -> a))
@@ -190,7 +197,9 @@ maybeIEEE opts s d
         return Nothing
     | otherwise = do
         msg opts $ "Result of replacing " ++ s ++ " is ok"
-        return (Just d)
+        if (dry opts)
+            then msg opts "Dry run, skipping replacement" >> return Nothing
+            else return (Just d)
     where
         err v = errorMsgS $ "Skipping replacement of " ++ s ++ " result " ++ v
 
