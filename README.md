@@ -18,6 +18,9 @@ Arguments can be passed to the plugin with
   $ ghc -fplugin ConstMath.Plugin -fplugin-opt=ConstMath.Plugin:ARG foo.hs
 
 currently available arguments are
+  --dry, --dry-run
+      Don't make any substitutions, just report on matches
+
   -v,--verbose
       verbose output (default)
 
