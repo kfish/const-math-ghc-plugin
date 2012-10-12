@@ -70,6 +70,47 @@ Currently available arguments are:
     -q, --quiet
         no output
 
+Inspecting the result
+---------------------
+
+To see the resulting changes, compare the core produced. An excellent way to
+view core is to `cabal install ghc-core`, a tool which runs ghc with options
+to dump the core and the disassembled output in a pager with syntax
+highlighting:
+
+    $ ghc-core -- -O2 -fplugin ConstMath.Plugin foo.hs
+
+Alternatively, just run ghc directly and ask it to show you the core:
+
+    $ ghc -fforce-recomp -ddump-simpl -O2 -fplugin ConstMath.Plugin foo.hs
+
+For example, we generate a short file with a single math expression:
+
+    $ echo "module Main where main = print (1.0 / sqrt (2 * pi))" > foo.hs
+
+Dumping the core produced by a normal optimized GHC build shows the
+sqrt will be evaluated at run-time:
+
+    $ ghc -ddump-simpl -O2 foo.hs | grep sqrt
+      case GHC.Prim./## 1.0 (GHC.Prim.sqrtDouble# 6.283185307179586)
+
+Note that GHC has already calculated the result of (2 * pi).
+
+However, dumping the core produced by GHC with the additional const math
+pass shows that the call to sqrt has been removed:
+
+    $ ghc -ddump-simpl -O2 -fplugin ConstMath.Plugin foo.hs | grep -c sqrt
+      0
+
+Inspecting the core further show that the division has also been removed,
+and the result of the entire math expression will be directly written into
+the executable:
+
+    GHC.Float.$w$sformatRealFloat
+      GHC.Float.FFGeneric
+      (Data.Maybe.Nothing @ GHC.Types.Int)
+      0.3989422804014327
+
 Tests
 -----
 
