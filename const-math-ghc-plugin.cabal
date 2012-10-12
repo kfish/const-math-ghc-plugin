@@ -1,5 +1,5 @@
 name:                const-math-ghc-plugin
-version:             0.3.0.0
+version:             0.3.0.1
 synopsis:            Compiler plugin for constant math elimination
 description:         
     This plugin evaluates constant math expressions at compile-time.
@@ -37,8 +37,13 @@ cabal-version:       >=1.8
 -- tests/*.hs shouldn't have to go here, but the source files
 -- for the test-suite stanzas don't get picked up by 'cabal sdist'.
 Extra-source-files:
-  tests/*.hs
+  tests/Make.hs
   tests/Makefile
+  tests/cmpoutput.mak
+  tests/ghc-7.4/*.hs
+  tests/ghc-7.4/Makefile
+  tests/ghc-7.6/*.hs
+  tests/ghc-7.6/Makefile
 
 library
   exposed-modules:     ConstMath.Plugin
