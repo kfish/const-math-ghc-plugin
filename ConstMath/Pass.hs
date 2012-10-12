@@ -183,6 +183,24 @@ mkUnaryCollapsePrimIEEE fnE opts expr@(App f1 (Lit lit))
                         =<< maybeIEEE opts (fromJust $ funcName f1) sub
 mkUnaryCollapsePrimIEEE _ _ expr = return expr
 
+mkBinaryCollapsePrimIEEE :: (forall a. RealFloat a => (a -> a -> a))
+                        -> Opts
+                        -> CoreExpr
+                        -> CoreM CoreExpr
+mkBinaryCollapsePrimIEEE fnE opts expr@(App (App primVar (Lit lit1)) (Lit lit2))
+    | MachDouble d1 <- lit1
+    , MachDouble d2 <- lit2
+      = e d1 d2 mkDoubleLitDouble
+    | MachFloat  d1 <- lit1
+    , MachFloat  d2 <- lit2
+      = e d1 d2 mkFloatLitFloat
+    where
+      e d1 d2 mkLit = let sub = fnE (fromRational d1) (fromRational d2)
+                  in  maybe (return expr)
+                        (return . mkLit)
+                        =<< maybeIEEE opts (fromJust $ funcName primVar) sub
+mkBinaryCollapsePrimIEEE _ _ expr = return expr
+
 ----------------------------------------------------------------------
 -- specialized collapsing functions
 
@@ -241,6 +259,9 @@ binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
 
 unaryPrimIEEE :: String -> (forall a. RealFloat a => a -> a) -> CMSub
 unaryPrimIEEE nm fn = CMSub nm (mkUnaryCollapsePrimIEEE fn)
+
+binaryPrimIEEE :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
+binaryPrimIEEE nm fn = CMSub nm (mkBinaryCollapsePrimIEEE fn)
 
 ----------------------------------------------------------------------
 
