@@ -312,23 +312,37 @@ subs =
     , unarySubIEEE "GHC.Float.asinh"  asinh
     , unarySubIEEE "GHC.Float.acosh"  acosh
     , unarySubIEEE "GHC.Float.atanh"  atanh
-    , unarySubNum "GHC.Num.negate"   negate
-    , unarySubNum "GHC.Num.abs"      abs
-    , unarySubNum "GHC.Num.signum"   signum
+    , unarySubNum "GHC.Num.negate"    negate
+    , unarySubNum "GHC.Num.abs"       abs
+    , unarySubNum "GHC.Num.signum"    signum
     -- PrimOp substitutions
-    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" exp
-    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" log
-    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" sqrt
-    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" sin
-    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" cos
-    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#" tan
+    , unaryPrimIEEE  "GHC.Prim.expDouble#"    exp
+    , unaryPrimIEEE  "GHC.Prim.logDouble#"    log
+    , unaryPrimIEEE  "GHC.Prim.sqrtDouble#"   sqrt
+    , unaryPrimIEEE  "GHC.Prim.sinDouble#"    sin
+    , unaryPrimIEEE  "GHC.Prim.cosDouble#"    cos
+    , unaryPrimIEEE  "GHC.Prim.tanDouble#"    tan
+    , unaryPrimIEEE  "GHC.Prim.asinDouble#"   asin
+    , unaryPrimIEEE  "GHC.Prim.acosDouble#"   acos
+    , unaryPrimIEEE  "GHC.Prim.atanDouble#"   atan
+    , unaryPrimIEEE  "GHC.Prim.sinhDouble#"   sinh
+    , unaryPrimIEEE  "GHC.Prim.coshDouble#"   cosh
+    , unaryPrimIEEE  "GHC.Prim.tanhDouble#"   tanh
+    , binaryPrimIEEE "GHC.Prim.**##"          (**)  -- DoublePowerOp
 
-    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" exp
-    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" log
-    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" sqrt
-    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" sin
-    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" cos
-    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#" tan
+    , unaryPrimIEEE  "GHC.Prim.expFloat#"     exp
+    , unaryPrimIEEE  "GHC.Prim.logFloat#"     log
+    , unaryPrimIEEE  "GHC.Prim.sqrtFloat#"    sqrt
+    , unaryPrimIEEE  "GHC.Prim.sinFloat#"     sin
+    , unaryPrimIEEE  "GHC.Prim.cosFloat#"     cos
+    , unaryPrimIEEE  "GHC.Prim.tanFloat#"     tan
+    , unaryPrimIEEE  "GHC.Prim.asinFloat#"    asin
+    , unaryPrimIEEE  "GHC.Prim.acosFloat#"    acos
+    , unaryPrimIEEE  "GHC.Prim.atanFloat#"    atan
+    , unaryPrimIEEE  "GHC.Prim.sinhFloat#"    sinh
+    , unaryPrimIEEE  "GHC.Prim.coshFloat#"    cosh
+    , unaryPrimIEEE  "GHC.Prim.tanhFloat#"    tanh
+    , binaryPrimIEEE "GHC.Prim.powerFloat#"   (**)  -- FloatPowerOp
     -- Specialized substitutions
     , CMSub    "GHC.Real.fromRational" fromRationalCollapse
     , CMSub    "GHC.Float.$fFractionalFloat_$cfromRational" fromRationalCollapse
