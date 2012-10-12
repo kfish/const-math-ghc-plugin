@@ -255,8 +255,8 @@ unarySubIEEE nm fn = CMSub nm (mkUnaryCollapseIEEE fn)
 unarySubNum :: String -> (forall a . Num a => (a -> a)) -> CMSub
 unarySubNum nm fn = CMSub nm (mkUnaryCollapseNum fn)
 
-binarySub :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
-binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
+_binarySub :: String -> (forall a. RealFloat a => a -> a -> a) -> CMSub
+_binarySub nm fn = CMSub nm (mkBinaryCollapse fn)
 
 unaryPrimIEEE :: String -> (forall a. RealFloat a => a -> a) -> CMSub
 unaryPrimIEEE nm fn = CMSub nm (mkUnaryCollapsePrimIEEE fn)
@@ -333,8 +333,8 @@ msg opts s
     | not (quiet opts) = putMsgS s
     | otherwise = return ()
 
-vMsg :: Opts -> String -> CoreM ()
-vMsg opts s
+_vMsg :: Opts -> String -> CoreM ()
+_vMsg opts s
     | verbose opts = putMsgS s
     | otherwise    = return ()
 
