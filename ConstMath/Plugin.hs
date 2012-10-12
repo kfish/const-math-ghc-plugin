@@ -19,7 +19,8 @@ install args todos = do
     let pass = CoreDoPasses [constMath]
     return $ intersperse pass todos
   where constMath = CoreDoPluginPass "Constant Math Elimination"
-            (bindsOnlyPass (constMathProgram (parseOpts args)) )
+            (bindsOnlyPass (constMathProgram opts) )
+        opts = parseOpts args
 
 -- TODO: use a real parser
 parseOpts :: [CommandLineOption] -> Opts
