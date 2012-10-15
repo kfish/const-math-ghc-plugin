@@ -6,11 +6,13 @@ module ConstMath.Types (
 -- ** Configuration Options
   Opts(..)
 , Verbosity(..)
+, CmInsertion(..)
 , defaultOpts
 -- *Configuration Functions
 -- ** Opt setters
 , setVerbosity
 , setDry
+, setInsertion
 -- ** Opt checkers
 , quiet
 , verbose
@@ -20,9 +22,17 @@ module ConstMath.Types (
 
 data Verbosity = None | CmVerbose Int | Trace deriving (Eq, Show, Ord)
 
+-- | Controls where the ConstMath pass is performed.
+data CmInsertion =
+      CmPostSimplifyEarly        -- ^ initially and after simplifier passes (within first 10 passes)
+    | CmPostSimplify             -- ^ initially and after every simplifier pass
+    | CmAlways                   -- ^ after every pass (expensive and usually wasteful)
+    deriving (Eq, Show, Ord)
+
 data Opts = Opts
     { cmVerbosity :: Verbosity
     , dryRun      :: Bool
+    , cmInsertion :: CmInsertion
     }
     deriving (Eq, Show)
 
@@ -32,8 +42,11 @@ setVerbosity cmVerbosity opts = opts{cmVerbosity}
 setDry :: Opts -> Opts
 setDry opts = opts{dryRun=True}
 
+setInsertion :: CmInsertion -> Opts -> Opts
+setInsertion cmInsertion opts = opts{cmInsertion}
+
 defaultOpts :: Opts
-defaultOpts = Opts None False
+defaultOpts = Opts None False CmPostSimplifyEarly
 
 quiet   :: Opts -> Bool
 quiet Opts{cmVerbosity} = cmVerbosity == None

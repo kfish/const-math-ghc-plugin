@@ -70,6 +70,18 @@ Currently available arguments are:
     -q, --quiet
         no output
 
+  Phase control
+
+    --enable-default
+        run a ConstMath pass after early simplifier passes
+
+    --enable-post-simpl
+        run a ConstMath pass after every simplifier pass
+
+    --enable-always
+        run a ConstMath pass after every compiler pass (expensive)
+
+
 Inspecting the result
 ---------------------
 

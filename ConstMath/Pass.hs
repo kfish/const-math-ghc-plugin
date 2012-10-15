@@ -19,9 +19,9 @@ import Data.Maybe
 
 import GhcPlugins
 
-constMathProgram :: Opts -> [CoreBind] -> CoreM [CoreBind]
-constMathProgram opts binds = do
-    traceMsg opts "\nStarting ConstMath pass"
+constMathProgram :: Int -> Opts -> [CoreBind] -> CoreM [CoreBind]
+constMathProgram n opts binds = do
+    traceMsg opts $ "\nStarting ConstMath pass - " ++ show n
     mapM (subBind opts "") binds
 
 subBind :: Opts -> String -> CoreBind -> CoreM CoreBind
